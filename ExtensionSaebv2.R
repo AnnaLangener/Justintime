@@ -43,7 +43,7 @@ C <- 0.1 # Within-subject variability (added within participant for each timepoi
 ##################################################
 ################# Data Simulation ################
 ##################################################
-source("/Users/f007qrc/Library/CloudStorage/GoogleDrive-anna.m.langener@dartmouth.edu/My Drive/Darmouth Drive/ML CrossValidation Project/Simulation_Functions.R")
+source("Simulation_Functions.R")
 
 features_sample <- create_data(n_features,n_samples,n_subjects,A,feature_std,B,C,overall_prob_outcome,sd_outcome,time_effect)
 features_sample_Astd <- features_sample[[2]]
