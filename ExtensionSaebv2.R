@@ -85,17 +85,19 @@ mean(features_sample$V1[features_sample$y == 0])
 
 n_features <- 10 # FIXED IN SAEB
 n_samples <- 90  # Timepoints/ RECORDS (fixed in saeb) Number of samples per subject
-n_subjects <- 150 # SUBJECTS (VARIED 4 TO 32) # Needs to be an even number
+n_subjects <- 150 # SUBJECTS (VARIED 4 TO 32) # Needs to be an even number # increase number of time points, center based on between
 time_effect = FALSE
 
-A <- 0.9 # Relationship between features and outcome try 0.15 again
+A <- 0.05 # Relationship between features and outcome try 0.15 again
 feature_std <- 0.1 # population level feature generating process
 
 # Initialize parameters
-overall_prob_outcome <- c(0.1,0.15,0.2,0.25,0.3,0.7,0.75,0.85,0.9)
+overall_prob_outcome <- seq(0.1, 1, by = 0.1)  
 sd_outcome <- seq(0.15, 0.29, by = 0.1)            
+
+#sd_outcome <- seq(0.05, 0.29, by = 0.05)            
 B <- seq(0.1, 1, by = 0.05)       
-C <-  0.1   
+C <-  0.3 
 
 
 # Create a grid of all parameter combinations
@@ -176,6 +178,18 @@ stopCluster(cl)
 # print elapsed time
 Sys.time() - old # calculate difference
 
+ggplotly(ggplot(result, aes(x=icc, y=auc_c, color = sd_outcome)) +
+  geom_point(alpha=0.5, size = 2) +
+  #scale_size(range = c(.001, 6), name="") +
+  theme_minimal() +
+  scale_colour_gradientn(colours = c("#2A363B","#83AF9B","#C8C8A9","#F9CDAD","#FC9D9A","#FE4365")) +
+  ylab("AUC") +
+  xlab("ICC outcome") +
+  guides(col = guide_colourbar()) +
+  ggtitle(paste("A = ", A)) +
+  # ggtitle(paste("A = ", A, "AUC_c min =",round(min(result$auc_c),2), "AUC_c max = ", round(max(result$auc_c),2),"AUC min =",round(min(result$auc),2), "AUC max = ", round(max(result$auc),2))) +
+  geom_hline(yintercept = 0) +
+  ylim(range= c(0.5,0.9)))
 
 ####### Overall Performance ##########
 library(patchwork)

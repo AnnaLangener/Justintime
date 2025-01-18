@@ -86,7 +86,7 @@ create_data <- function(n_features,n_samples,n_subjects,A,feature_std,B,C,overal
     mutate(across(all_of(colnames(features_sample[[1]][,1:10])), ~ . - get(paste0(cur_column(), "_mean")))) %>%
     select(all_of(colnames(features_sample[[1]][,1:10])),"subject","time","y","A")
   
-  return(features_sample)
+  return(features_sample[[1]])
 }
 
 
@@ -116,11 +116,14 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   print(cv)
   
   for (i in 1:n_bootstrap) {
-    
+  n_subjects  = length(unique(features_sample$subject))
+  n_samples  = length(unique(features_sample$time))
+  n_features = ncol(features_sample) - 4
+  
   #### Row wise and subject wise ####
   #  Prepare training and testing sets
     if(cv == "row-wise"){
-      samples_test <- base::sample(x = n_subjects * n_samples,size = testsize * n_subjects * n_samples) 
+      samples_test <- sample(x = n_subjects * n_samples,size = testsize * n_subjects * n_samples) 
       samples_train <- setdiff(1:(n_subjects * n_samples), samples_test) 
       
       train_X = features_sample[samples_train, 1:n_features]
@@ -146,6 +149,7 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
     
     # Train and evaluate the Random Forest model  
     if(cv == "subject-wise" | cv == "row-wise"){
+      
       RF <- randomForest(train_X,train_Y)
       class_pred <- predict(RF, test_X)
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
@@ -224,12 +228,17 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
     auc_value_base = auc_value_base,
     overall_summary = overall_summary
   )
+  results_shiny <- list(
+    Mean_AUC = mean(auc_value),
+    Mean_Accuracy = mean(acc),
+    overall_summary = overall_summary
+  )
   
   print(paste("Mean AUC:",mean(auc_value)))
   print(paste("Mean Accuracy:",mean(acc)))
   print("Individual Results Summary:")
   print(overall_summary)
-  return(results)
+  return(results_shiny)
 } 
 ############################################
 run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, seed = "12361488"){
@@ -357,10 +366,9 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
     data.frame(mean = x$mean_auc, sd = x$sd_auc, percent_above_0_5 = x$percent_above_0_5, total_n = x$total_n)
   }))
   
-  results <- list(
-    acc = acc,
-    auc_value = auc_value,
-    ind = ind,
+  results_shiny <- list(
+    Mean_AUC = mean(auc_value),
+    Mean_Accuracy = mean(acc),
     overall_summary = overall_summary
   )
   
@@ -368,7 +376,7 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
   print(paste("Mean Accuracy:",mean(acc)))
   print("Individual Results Summary:")
   print(overall_summary)
-  return(results)
+  return(results_shiny)
 }      
 
 

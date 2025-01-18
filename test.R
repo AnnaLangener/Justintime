@@ -1,26 +1,12 @@
 library(shiny)
 library(bslib)
-
-library(randomForest)
-library(R.matlab)
-library(foreach)
-library(doParallel)
 library(dplyr)
 library(lme4)
-library(tseries)
 library(caret)
-library(pROC)
-library(boot)
 library(plotly)
 
 # Source external functions
 source("Simulation_Functions.R")
-library(shiny)
-library(bslib)
-library(ggplot2)
-library(dplyr)
-library(lme4)
-library(tseries)
 
 # Define UI for application
 ui <- fluidPage(
@@ -35,13 +21,13 @@ ui <- fluidPage(
                sidebarPanel(
                  h3("Basic Parameters"),
                  numericInput("n_features", "Number of Features:", value = 10, min = 1, step = 1),
-                 numericInput("n_samples", "Number of Samples (timepoints per subject):", value = 90, min = 1, step = 1),
-                 numericInput("n_subjects", "Number of Subjects:", value = 150, min = 2, step = 2),
+                 numericInput("n_samples", "Number of Samples (per subject):", value = 90, min = 1, step = 1),
+                 numericInput("n_subjects", "Number of Subjects (even number):", value = 150, min = 2, step = 2),
                  
                  h3("Outcome Parameters"),
                  numericInput("overall_prob_outcome", "Overall Probability of Outcome:", value = 0.1, min = 0, max = 1, step = 0.01),
                  numericInput("sd_outcome", "Standard Deviation of Outcome (Between Subjects):", value = 0.25, step = 0.01),
-                 checkboxInput("time_effect", "Include Time Effect", value = FALSE),
+                 checkboxInput("time_effect", "Include Time Effect:", value = FALSE),
                  
                  h3("Feature Generation"),
                  numericInput("A", "Relationship Between Features and Outcome (A):", value = 0.05, step = 0.01),
@@ -51,7 +37,7 @@ ui <- fluidPage(
                  
                  h3("Simulation Parameters"),
                  numericInput("test_size", "Test Set Size (Proportion):", value = 0.3, min = 0.1, max = 0.9, step = 0.1),
-                 selectInput("split_method", "Data Split Method:", choices = c("row-wise", "subject-wise"), selected = "row-wise"),
+                 selectInput("split_method", "Data Split Method:", choices = c("row-wise", "column-wise"), selected = "row-wise"),
                  numericInput("replications", "Number of Replications:", value = 1, min = 1, step = 1),
                  
                  actionButton("generate_data", "Generate Data"),
@@ -62,12 +48,8 @@ ui <- fluidPage(
                  h4("Generated Features"),
                  tableOutput("generated_features"),
                  
-                 h4("Visualization"),
-                 plotOutput("simulation_plot"),
-                 
                  h4("Simulation Results"),
                  tableOutput("simulation_results")
-            
                )
              )
     ),
@@ -95,22 +77,18 @@ ui <- fluidPage(
                  h4("ICC Predictor Table"),
                  tableOutput("icc_table"),
                  
-                 h4("Visualization"),
-                 plotOutput("upload_plot"),
-                 
                  h4("Simulation Results"),
                  tableOutput("simulation_results_upload")
-              
                )
              )
     )
   )
 )
 
+# Define server logic
 server <- function(input, output) {
   # Original Simulation Logic
   generated_features <- eventReactive(input$generate_data, {
-    # Simulate some data (you'll need to implement create_data)
     create_data(
       n_features = input$n_features,
       n_samples = input$n_samples,
@@ -127,34 +105,10 @@ server <- function(input, output) {
   
   output$generated_features <- renderTable({
     req(generated_features())
-    head(generated_features())
+    generated_features()
   })
   
-  output$simulation_plot <- renderPlot({
-    req(generated_features())
-    features_sample <- generated_features()
-    
-    ggplot(features_sample, aes(x = time, y = y)) +
-      geom_point(color = "#83AF9B") +
-      facet_wrap(~subject) +
-      labs(x = "Time", y = "Outcome") +
-      theme_minimal()
-  })
   
-  simulation_results <- eventReactive(input$run_sim, {
-    req(generated_features())
-    run_simulation(
-      features_sample = generated_features(),
-      cv = input$split_method,
-      n_bootstrap = input$replications,
-      testsize = input$test_size
-    )
-  })
-  
-  output$simulation_results <- renderTable({
-    req(simulation_results())
-    simulation_results()
-  })
   
   # Data Upload Logic
   uploaded_data <- eventReactive(input$analyze_data, {
@@ -181,7 +135,6 @@ server <- function(input, output) {
       `Number of Samples per Subject` = n_samples
     )
   })
-  
   
   output$icc_table <- renderTable({
     req(uploaded_data())
@@ -216,20 +169,8 @@ server <- function(input, output) {
     req(simulation_results_upload())
     simulation_results_upload()
   })
-  
-  
-  output$upload_plot <- renderPlot({
-    req(uploaded_data())
-    data <- uploaded_data()
-    
-    ggplot(data, aes(x = !!sym(input$time_variable), y = !!sym(input$outcome_variable))) +
-      geom_point(color = "#83AF9B") +
-      facet_wrap(as.formula(paste("~", input$id_variable))) +
-      labs(x = "Time", y = "Outcome") +
-      theme_minimal()
-  })
 }
-
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
