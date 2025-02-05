@@ -2,85 +2,26 @@
 ### Simulation Functions #####
 ##############################
 
-estBetaParams <- function(mu, var) {
-  alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
-  beta <- alpha * (1 / mu - 1)
-  return(params = list(alpha = alpha, beta = beta))
-} #taken from https://stats.stackexchange.com/questions/12232/calculating-the-parameters-of-a-beta-distribution-using-the-mean-and-variance/12239#12239
-
-create_data <- function(n_features,n_samples,n_subjects,A,feature_std,B,C,overall_prob_outcome,sd_outcome,time_effect = F){
+shuffle_data <- function(data, subject_var, outcome_var) {
+  # Shuffle participant IDs:
+  unique_subjects <- unique(data[[subject_var]])
+  shuffled_subjects <- sample(unique_subjects)
+  mapping <- data.frame(old_subject = unique_subjects, new_subject = shuffled_subjects,
+                        stringsAsFactors = FALSE)
   
-  y <- vector("numeric", length = n_subjects * n_samples) 
-  subject_id <- rep(1:n_subjects, each = n_samples)  # Repeat subject IDs for each timepoint
-  time_id <- rep(1:n_samples, times = n_subjects)  # Repeat timepoints for each subject
-  data <- data.frame(subject = subject_id, time = time_id, y = y)
+  # Merge mapping with data and update the subject column:
+  data <- data %>%
+    left_join(mapping, by = setNames("old_subject", subject_var)) %>%
+    mutate(!!sym(subject_var) := new_subject) %>%
+    select(-new_subject)
   
-  # Simulate Outcome
-  para <- estBetaParams(overall_prob_outcome,sd_outcome^2)
-  prob_l <- rbeta(n=n_subjects ,shape1 = para$alpha, shape2 = para$beta) # sample probability for each subject
+  # Shuffle the outcome variable within each subject:
+  data <- data %>%
+    group_by(!!sym(subject_var)) %>%
+    mutate(!!sym(outcome_var) := sample(!!sym(outcome_var))) %>%
+    ungroup()
   
-  print(paste("Mean prob:",mean(prob_l)))
-  print(paste("SD prob:",sd(prob_l)))
-  
-  prob_l = rep(prob_l, each = n_samples) 
-
-  prob_matrix = prob_l
- 
-  
-  data$y <- rbinom(n_subjects * n_samples, size = 1, prob = prob_matrix) #sample 0 or 1 for each subject & timepoint, prob_matrix indicates the probability for each subject
-  data$A = data$y
-
-  # Simulate Features (adapted from Saeb et al. and https://aosmith.rbind.io/2018/04/23/simulate-simulate-part-2/)
-  data$A[data$y == 0] = -A # relationship to outcome
-  data$A[data$y == 1] = A
-  
-  features_sample <- list()
-  
-  features_sample_ABCstd <- as.data.frame(array(0, dim = c(n_subjects * n_samples, n_features)))
-  features_sample_ABCstd <- cbind(features_sample_ABCstd,data)
-  
-  features_sample_Astd <- as.data.frame(array(0, dim = c(n_subjects * n_samples, n_features)))
-  features_sample_Astd <- cbind(features_sample_Astd,data)
-  
-  features_sample[[1]] <- features_sample_ABCstd
-  features_sample[[2]] <- features_sample_Astd
-  
-  for (i in 1:n_features) {
-    
-    if(length(B) == 1){
-    feature_noise <- rep(feature_std * rnorm(1,mean = 0, sd = 1), each = n_subjects*n_samples) #d_e POPULATION LEVEL FEATURE GENERATING PROCESS
-    subjecteff = B *rnorm(n_subjects, mean = 0, sd = 1) #B * rnorm(n_subjects) 
-    subjecteff = rep(subjecteff, each = n_samples)
-    timeeff = C * rnorm(n_subjects*n_samples, mean = 0, sd = 1) #C * rnorm(n_subjects*n_samples)
-    maineff = features_sample[[1]]$A
-    
-    features_sample[[1]][,i] = maineff + feature_noise + subjecteff + timeeff 
-    features_sample[[2]][,i] = maineff + feature_noise + timeeff 
-    
-    }else{
-      feature_noise <- rep(feature_std * rnorm(1,mean = 0, sd = 1), each = n_subjects*n_samples) #d_e POPULATION LEVEL FEATURE GENERATING PROCESS
-      subjecteff = B[i] *rnorm(n_subjects, mean = 0, sd = 1) #B * rnorm(n_subjects) 
-      subjecteff = rep(subjecteff, each = n_samples)
-      timeeff = C[i] * rnorm(n_subjects*n_samples, mean = 0, sd = 1) #C * rnorm(n_subjects*n_samples)
-      maineff = features_sample[[1]]$A
-      
-      features_sample[[1]][,i] = maineff + feature_noise + subjecteff + timeeff 
-      features_sample[[2]][,i] = maineff + feature_noise + timeeff 
-    }
-    
-  }
-  # Center the training set
-  subject_means <- features_sample[[1]] %>%
-    group_by(subject) %>%
-    summarise(across(all_of(colnames(features_sample[[1]][,1:10])), mean), .groups = "drop")
-  
-  # Center the training set
-  features_sample[[3]] <- features_sample[[1]] %>%
-    left_join(subject_means, by = "subject", suffix = c("", "_mean")) %>%
-    mutate(across(all_of(colnames(features_sample[[1]][,1:10])), ~ . - get(paste0(cur_column(), "_mean")))) %>%
-    select(all_of(colnames(features_sample[[1]][,1:10])),"subject","time","y","A")
-  
-  return(features_sample[[1]])
+  return(data)
 }
 
 
@@ -90,7 +31,7 @@ create_data <- function(n_features,n_samples,n_subjects,A,feature_std,B,C,overal
 
 ############# Subject Wise and Row Wise ################
 
-run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "12361488",n_features){
+run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "12361488",n_features){
   set.seed(seed)
   acc <- numeric(n_bootstrap)
   auc_value <- numeric(n_bootstrap)
@@ -107,19 +48,17 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   pred_list_base <- list() 
   ind_base <- list()
   
-  print(cv)
-  
   features_sample <- na.omit(features_sample)
-
-  for (i in 1:n_bootstrap) {
-  n_subjects  = length(unique(features_sample$subject))
-  print(n_subjects)
-  n_samples  = length(unique(features_sample$time))
-  print(n_samples)
-  n_features = n_features
   
-  #### Row wise and subject wise ####
-  #  Prepare training and testing sets
+  for (i in 1:n_bootstrap) {
+    n_subjects  = length(unique(features_sample$subject))
+    print(n_subjects)
+    n_samples  = length(unique(features_sample$time))
+    print(n_samples)
+    
+    
+    #### Row wise and subject wise ####
+    #  Prepare training and testing sets
     if(cv == "row-wise"){
       samples_test <- sample(x =nrow(features_sample), size = floor(testsize * nrow(features_sample))) 
       samples_train <- setdiff(1:(nrow(features_sample)), samples_test) 
@@ -128,21 +67,22 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
       print(length(samples_test))
       print(nrow(features_sample))
       
-      train_X = features_sample[samples_train, 1:n_features]
-      test_X = features_sample[samples_test, 1:n_features]
+      
+      train_X = features_sample[samples_train, which(colnames(features_sample) %in% n_features)]
+      test_X = features_sample[samples_test, which(colnames(features_sample) %in% n_features)]
       
       train_Y =  as.factor(features_sample$y[samples_train])
       test_Y = as.factor(features_sample$y[samples_test])
       
       subject[[i]] = features_sample$subject[samples_test]
-
+      
       
     }else if(cv == "subject-wise"){
       subjects_test <- sample(n_subjects -round(testsize*n_subjects) , round(testsize*n_subjects)) 
       subjects_train <- setdiff(1:n_subjects, subjects_test)  
       
-      train_X = features_sample[features_sample$subject %in% subjects_train, 1:n_features]
-      test_X = features_sample[features_sample$subject %in% subjects_test,1:n_features]
+      train_X = features_sample[features_sample$subject %in% subjects_train,  which(colnames(features_sample) %in% n_features)]
+      test_X = features_sample[features_sample$subject %in% subjects_test, which(colnames(features_sample) %in% n_features)]
       
       train_Y = as.factor(features_sample$y[features_sample$subject %in% subjects_train])
       test_Y = as.factor(features_sample$y[features_sample$subject %in% subjects_test])
@@ -152,7 +92,7 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
     
     # Train and evaluate the Random Forest model  
     if(cv == "subject-wise" | cv == "row-wise"){
-  
+      
       
       RF <- randomForest(train_X,train_Y,na.action=na.omit)
       class_pred <- predict(RF, test_X)
@@ -172,25 +112,25 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
           data = features_sample[samples_train,], 
           family = binomial(link = "logit") 
         )
-      
-      class_pred_base <- predict(Baseline, newdata = features_sample[samples_test,], re.form = ~(1 | subject), type = "response")
-      
-      true_list_base[[i]]<- test_Y
-      pred_list_base[[i]] <- as.numeric(as.character(class_pred_base))
-      roc_curve_base <- roc(test_Y,  as.numeric(as.character(class_pred_base)),quiet = TRUE)
-      auc_value_base[i] <- auc(roc_curve_base)
-      
-      class_pred_base2 <- ifelse(class_pred_base > 0.5, 1, 0)
-      acc_base[i] <- mean(as.numeric(as.character(class_pred_base2)) == test_Y)
-      
-      ind_base[[i]] = data.frame(subject = subject[[i]], true = true_list_base[[i]], pred = pred_list_base[[i]])
+        
+        class_pred_base <- predict(Baseline, newdata = features_sample[samples_test,], re.form = ~(1 | subject), type = "response")
+        
+        true_list_base[[i]]<- test_Y
+        pred_list_base[[i]] <- as.numeric(as.character(class_pred_base))
+        roc_curve_base <- roc(test_Y,  as.numeric(as.character(class_pred_base)),quiet = TRUE)
+        auc_value_base[i] <- auc(roc_curve_base)
+        
+        class_pred_base2 <- ifelse(class_pred_base > 0.5, 1, 0)
+        acc_base[i] <- mean(as.numeric(as.character(class_pred_base2)) == test_Y)
+        
+        ind_base[[i]] = data.frame(subject = subject[[i]], true = true_list_base[[i]], pred = pred_list_base[[i]])
       }
     }
   } # end bootstrap
-
+  
   if(cv == "row-wise"){ 
-    print(paste("Baseline Mean AUC:",mean(auc_value_base, na.rm = TRUE)))
-    print(paste("Baseline Mean Accuracy:",mean(acc_base, na.rm = TRUE)))
+    print(paste("Baseline Mean AUC:",mean(auc_value_base)))
+    print(paste("Baseline Mean Accuracy:",mean(acc_base)))
     print("Model Results:")
     
   }
@@ -236,7 +176,7 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   results_shiny <- list(
     auc_value_base = auc_value_base,
     acc_base = acc_base,
-    Mean_AUC = mean(auc_value, na.rm = TRUE),
+    Mean_AUC = mean(auc_value),
     Mean_Accuracy = mean(acc, na.rm = TRUE),
     overall_summary = overall_summary
   )
@@ -252,7 +192,7 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   return(results_shiny)
 } 
 ############################################
-run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, seed = "12361488"){
+run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "12361488",n_features){
   set.seed(seed)
   acc <- numeric(n_bootstrap)
   auc_value <- numeric(n_bootstrap)
@@ -272,24 +212,20 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
   print(cv)
   
   for (i in 1:n_bootstrap) {
-    n_subjects  = length(unique(features_sample$subject))
-    n_samples  = length(unique(features_sample$time))
-    n_features = ncol(features_sample) - 4
-    
     #### Row wise and subject wise ####
     #  Prepare training and testing sets
-
-    samples_test <- base::sample(x = n_subjects * n_samples,size = testsize * n_subjects * n_samples) 
-    samples_train <- setdiff(1:(n_subjects * n_samples), samples_test) 
     
-    train_X = features_sample[samples_train, 1:n_features]
-    test_X = features_sample[samples_test, 1:n_features]
+    samples_test <- sample(x =nrow(features_sample), size = floor(testsize * nrow(features_sample))) 
+    samples_train <- setdiff(1:(nrow(features_sample)), samples_test) 
+    
+    train_X = features_sample[samples_train, which(colnames(features_sample) %in% n_features)]
+    test_X = features_sample[samples_test, which(colnames(features_sample) %in% n_features)]
     
     train_Y =  as.factor(features_sample$y[samples_train])
     test_Y = as.factor(features_sample$y[samples_test])
     
     subject[[i]] = features_sample$subject[samples_test]
-  
+    
     # Center the training set
     subject_means <- features_sample[samples_train, ] %>%
       group_by(subject) %>%
@@ -345,7 +281,7 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
   
   if(cv == "row-wise"){ 
     print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-    print(paste("Baseline Mean Accuracy:",mean(acc_base, na.rm = TRUE)))
+    print(paste("Baseline Mean Accuracy:",mean(acc_base)))
     print("Model Results:")
     
   }
@@ -384,8 +320,8 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
   results_shiny <- list(
     auc_value_base = auc_value_base,
     acc_base = acc_base,
-    Mean_AUC = mean(auc_value,na.rm = TRUE),
-    Mean_Accuracy = mean(acc,na.rm = TRUE),
+    Mean_AUC = mean(auc_value),
+    Mean_Accuracy = mean(acc, na.rm = TRUE),
     overall_summary = overall_summary
   )
   
@@ -409,13 +345,13 @@ SlidingWindow_CV <- function(data, origin, horizon){
   samplesize <- data
   trainindex <- list()
   testindex <- list()
-
+  
   trainindex[[1]] <- 1:origin
   testindex[[1]] <- (origin + 1):(origin+horizon)
-
+  
   counter <- 1
   index <- testindex[[1]][horizon]+1
-
+  
   while(testindex[[counter]][horizon] < (samplesize-horizon)){
     index <- testindex[[counter]][horizon]+1
     trainindex[[counter+1]] <- (index-origin+1):index-1
@@ -425,7 +361,10 @@ SlidingWindow_CV <- function(data, origin, horizon){
   return(list(trainindex,testindex))
 }
 
-run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,n_features = n_features){
+
+#############################
+
+run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windowsize,n_features = n_features){
   acc <- numeric(n_bootstrap)
   auc_value <- numeric(n_bootstrap)
   acc_rep <- numeric(n_bootstrap)
@@ -443,8 +382,7 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
   ind_base <- list()
   
   n_samples  = length(unique(features_sample$time))
-  n_features = n_features
-  
+
   print("sliding-window")
   
   for (i in 1:n_bootstrap) {
@@ -465,8 +403,8 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
     ind_t_base <- data.frame()
     
     for(k in 1:length(trainSlices)){
-      train_X = features_sample[features_sample$time %in% trainSlices[[k]], 1:n_features]
-      test_X = features_sample[features_sample$time %in% testSlices[[k]], 1:n_features]
+      train_X = features_sample[features_sample$time %in% trainSlices[[k]], which(colnames(features_sample) %in% n_features)]
+      test_X = features_sample[features_sample$time %in% testSlices[[k]], which(colnames(features_sample) %in% n_features)]
       train_Y = as.factor(features_sample$y[features_sample$time %in% trainSlices[[k]]])
       test_Y = as.factor(features_sample$y[features_sample$time %in% testSlices[[k]]])
       
@@ -500,17 +438,17 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
       )
       
       class_pred_base <- predict(Baseline, newdata = features_sample[features_sample$time %in% testSlices[[k]],], re.form = ~(1 | subject), type = "response")
-     
+      
       if (length(unique(test_Y)) == 2) {
         roc_curve_base <- roc(test_Y,  as.numeric(as.character(class_pred_base)),quiet = TRUE)
         auc_value_base_sw[k] <- auc(roc_curve_base)
       } else {
         auc_value_base_sw[k] <- NA
       }
-
+      
       class_pred_base2 <- ifelse(class_pred_base > 0.5, 1, 0)
       acc_sw_base[k] <- mean(as.numeric(as.character(class_pred_base2)) == test_Y)
-
+      
       
       ind_t_base <- rbind(
         ind_t_base,
@@ -595,7 +533,8 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
   return(results_shiny)
 }      
 
-run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,windowsize,n_features = n_features){
+
+run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstrap,windowsize,n_features = n_features){
   acc <- numeric(n_bootstrap)
   auc_value <- numeric(n_bootstrap)
   acc_rep <- numeric(n_bootstrap)
@@ -613,7 +552,6 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
   ind_base <- list()
   
   n_samples  = length(unique(features_sample$time))
-  n_features = n_features
   
   print("sliding-window")
   
@@ -635,11 +573,10 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
     ind_t_base <- data.frame()
     
     for(k in 1:length(trainSlices)){
-      train_X = features_sample[features_sample$time %in% trainSlices[[k]], 1:n_features]
-      test_X = features_sample[features_sample$time %in% testSlices[[k]], 1:n_features]
+      train_X = features_sample[features_sample$time %in% trainSlices[[k]], which(colnames(features_sample) %in% n_features)]
+      test_X = features_sample[features_sample$time %in% testSlices[[k]], which(colnames(features_sample) %in% n_features)]
       train_Y = as.factor(features_sample$y[features_sample$time %in% trainSlices[[k]]])
       test_Y = as.factor(features_sample$y[features_sample$time %in% testSlices[[k]]])
-      
       
       # Center the training set
       subject_means <- features_sample[features_sample$time %in% trainSlices[[k]],] %>%
@@ -762,7 +699,7 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
   )
   
   results_shiny <- list(
-    auc_value_base = mean(auc_value_base),
+    auc_value_base = mean(auc_value_base, na.rm = TRUE),
     acc_base = mean(acc_base, na.rm = T),
     Mean_AUC = mean(auc_value, na.rm = T),
     Mean_Accuracy = mean(acc_sw, na.rm = TRUE),
