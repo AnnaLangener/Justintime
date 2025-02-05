@@ -183,7 +183,7 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
   
   results_shiny <- t(as.data.frame(results_shiny))
   colnames(results_shiny) <- NULL
-  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
+  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
   print(paste("Mean AUC:",mean(auc_value)))
   print(paste("Mean Accuracy:",mean(acc)))
@@ -327,7 +327,7 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
   
   results_shiny <- t(as.data.frame(results_shiny))
   colnames(results_shiny) <- NULL
-  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
+  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
   print(paste("Mean AUC:",mean(auc_value)))
   print(paste("Mean Accuracy:",mean(acc)))
@@ -521,7 +521,7 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
   
   results_shiny <- t(as.data.frame(results_shiny))
   colnames(results_shiny) <- NULL
-  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
+  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
   
   
@@ -708,7 +708,7 @@ run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstr
   
   results_shiny <- t(as.data.frame(results_shiny))
   colnames(results_shiny) <- NULL
-  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
+  rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
   
   

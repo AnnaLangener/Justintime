@@ -30,11 +30,11 @@ library(DT)
 ui <- fluidPage(
   theme = bs_theme(version = 5, bootswatch = "journal"),
   
-  titlePanel("Just in Time or Just a Guess?"),
+  titlePanel("Just in time?"),
   
   tabsetPanel(
     # Original Simulation Tab
-    tabPanel("Create simulated dataset",
+    tabPanel("Run your own simulation",
              sidebarLayout(
                sidebarPanel(
                  h5("Basic Parameters"),
@@ -65,28 +65,22 @@ ui <- fluidPage(
                ),
                
                mainPanel(
-                 h5("Download Simulated Data"),
-                 p("Note: After generating the data you can use this data as an example in the 'Upload your own data' tab."),
-                 downloadButton("download_sim", "Download Simulated Data"),
-                 tags$br(),
-                 tags$br(),
                  
-                 accordion(
-                   accordion_panel(
-                     title = "Example Features",
-                     tableOutput("generated_features")
+                 accordion( 
+                   accordion_panel( 
+                     title = "Visualization", 
+                     plotOutput("simulation_plot",width = "600px", height = "650px")
+                     
                    ),
-                   
-                   accordion_panel(
-                     title = "Simulation Results",
-                     h5("Info"),
-                     p("You can also download this data and upload it in the 'Upload your own data' tab for further visualization and analysis."),
+                   accordion_panel( 
+                     title = "Example Features", 
+                     tableOutput("generated_features")
                      
-                     h5("Simulation Results (Not Centered)"),
+                   ),
+                   accordion_panel( 
+                     title = "Simulation Results", 
                      tableOutput("simulation_results"),
-                     
-                     h5("Simulation Results (Centered)"),
-                     tableOutput("simulation_results_centered")
+                     tableOutput("simulation_results_centered"),
                 
                    )  
                  ),
@@ -97,7 +91,7 @@ ui <- fluidPage(
     ),
 
     # Data Upload Tab
-    tabPanel("Upload your own data",
+    tabPanel("Upload your data",
              sidebarLayout(
                sidebarPanel(
                  h3("Upload Dataset"),
@@ -150,9 +144,9 @@ ui <- fluidPage(
                     tableOutput("simulation_results_upload1"),
                     h5("Baseline Model 2: Shuffled Outcome Variable"),
                     h6("Variance Explained by Between Person Differences"),
-                    "In addition to a random intercept model, it’s useful to include a baseline model with predictors that have no relationship to the outcome.This helps determine if the predictors are merely distinguishing between individuals or if they capture a relationship to the outcome. If a significant portion of the variance in both the outcome and predictors is explained by between-person differences, the model may merely differentiate between individuals.",
+                    "In addition to a random intercept model, it’s useful to include a baseline model with predictors that have no relationship to the outcome.",
                     tags$br(),
-                    tags$br(),
+                    "This helps determine if the predictors are merely distinguishing between individuals or if they capture a relationship to the outcome. If a significant portion of the variance in both the outcome and predictors is explained by between-person differences, the model may merely differentiate between individuals. Below, you can see the percentage of variance in the outcome (ICC outcome) and predictors explained by between-person differences.",
                     textOutput("methods_text_icc"),
                     tags$br(),
                     div(DT::dataTableOutput("icc_table"), style = "font-size: 75%; width: 75%"),
@@ -160,7 +154,6 @@ ui <- fluidPage(
                     tags$br(),
                     h6("Model Performance"),
                     "To assess the impact of the variance explained by the predictor variables, it’s helpful to include, in addition to a random intercept model, a baseline model with predictors that have no true relationship to the outcome. We achieve this by shuffling the outcome variable within each person and also shuffling the subject identifiers. This preserves the outcome distribution but removes any true relationship with the predictors. We then run a random forest model. Please note that both baseline models should perform worse than your actual model to ensure that the predictors are truly contributing to the outcome.",
-                    tags$br(),
                     tags$br(),
                     withSpinner(textOutput("simulation_results_text1_baseline")),
                     tags$br(),
@@ -185,19 +178,66 @@ ui <- fluidPage(
                  
                )
              )
-    ),selected="Upload your own data"
+    ),
+    
+    tabPanel("Explore study results",
+             sidebarLayout(
+               sidebarPanel(
+                 h4("Filter data?"),
+                 checkboxInput("filter_values", "Filter Data"),
+                 h5("Paramters:"),
+                 selectInput("A_viz", "A:", c(0,0.05,0.2,0.8), 0.05),
+                 sliderInput("mean_viz", "Overall Probability Outcome:", min = 0.1, max = 0.9, value = c(0.1, 0.9)),
+                 sliderInput("sd_viz", "Standard Deviation of Outcome:", min = 0.05, max = 0.25, value = c(0.05, 0.25)),
+                 sliderInput("icc_viz", "ICC:", min = 0, max = 0.85, value = c(0, 0.85)),
+                 sliderInput("icc_pred_viz", "Predictors ICC:", min = 0, max = 1, value = c(0, 1)),
+                 sliderInput("auc_value_base_viz", "AUC Value Base:", min = 0.4, max = 1, value = c(0.4, 1)),
+                 sliderInput("auc_value_viz", "AUC Value:", min = 0.4, max = 1, value = c(0.4, 1)),
+                 sliderInput("auc_individual_mean_viz", "AUC Within-Person:", min = 0.4, max = 1, value = c(0.4, 1)),
+                 sliderInput("auc_c_mean_viz", "AUC Centered:", min = 0.4, max = 1, value = c(0.4, 1)),
+                 sliderInput("auc_c_individual_mean_viz", "AUC Centered Within-Person:",min = 0, max = 1, value = c(0, 1)),
+                 sliderInput("total_n_viz", "Total N:", min = 0, max = 150, value = c(0, 150)),
+                 sliderInput("sd_intercept_viz", "SD Intercept:", min = 0, max = 1.2, value = c(0, 1.2)), # Just add 4 different bins
+                 sliderInput("sd_residual_viz", "SD Residual:", min = 0, max = 0.5, value = c(0.1, 0.5)) # Just add 4 different bins
+                
+               ),
+               mainPanel(
+                 fluidRow(
+                   # Create columns to position select inputs next to each other
+                   column(4,  # 4/12 width for the first select input
+                          selectInput("x_var", "X-Axis Variable:", 
+                                      choices = c("icc", "auc", "auc_c", "sd_residual"), 
+                                      selected = "icc")
+                   ),
+                   column(4,  # 4/12 width for the second select input
+                          selectInput("y_var", "Y-Axis Variable:", 
+                                      choices = c("auc", "auc_c", "auc_individual", "auc_c_individual"), 
+                                      selected = "auc")
+                   ),
+                   column(4,  # 4/12 width for the third select input
+                          selectInput("color_var", "Color Variable:", 
+                                      choices = c("sd_residual", "icc_pred", "sd_intercept", "sd_outcome"), 
+                                      selected = "icc_pred")
+                   )
+                 ),
+                 
+                 h4("Visualization"),
+                 
+                 plotOutput("plot1"),
+                 plotOutput("plot3")
+                 
+               )
+             )
+    ),selected="Upload your data"
+    
+    
   )
 )
 
 server <- function(input, output, session) {
-  
-  
-  #########################################################
-  ######################## Data Sim #######################
-  #########################################################
-  
-
+  # Original Simulation Logic
   generated_features <- eventReactive(input$generate_data, {
+    # Simulate some data (you'll need to implement create_data)
     create_data(
       n_features = input$n_features_sim,
       n_samples = input$n_samples_sim,
@@ -217,18 +257,26 @@ server <- function(input, output, session) {
     head(generated_features())
   })
   
-  
-  output$download_sim <- downloadHandler(
-    filename = function() {
-      paste("simulated_data.csv", sep = "")  # File name for download
-    },
-    content = function(file) {
-      req(generated_features())  # Ensure data is available before downloading
-      data <- generated_features()  # Retrieve generated data
-      write.csv(data, file, row.names = FALSE)  # Write data to CSV
-    }
-  )
-  
+  output$simulation_plot <- renderPlot({
+    req(generated_features())
+    features_sample <- generated_features()
+    
+    grouped <- features_sample %>% group_by(subject) %>% summarise(prob = mean(y))
+    sd_outcome <- sd(grouped$prob)
+    mean_y = mean(features_sample$y)
+    
+    ggplot(features_sample, aes(x = time, y = y)) +
+      geom_point(color = "#83AF9B") +
+      facet_wrap(~subject) +
+      labs(x = "Time", y = "Outcome") +
+      ggtitle(paste("Mean prevalence:",round(mean_y,2), "sd:",round(sd_outcome,2))) +
+      theme_minimal() +
+      xlab("") +
+      theme(axis.text=element_text(size=0),
+            axis.title=element_text(size=14,face="bold"),
+            title =element_text(size=14,face="bold") ) 
+    
+  },height = 650, width = 600)
   
   simulation_results <- eventReactive(input$run_sim, {
     req(generated_features())
@@ -309,7 +357,48 @@ server <- function(input, output, session) {
   ######################## Tab 2 ##########################
   #########################################################
   
-  ############ Data Upload/ Settings ##############
+  ######### First Section ##########
+  
+  output$output_text_1 <- renderText({
+    switch(input$split_method_own,
+           "row-wise" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'row-wise' cross-validation split. This means that participants are present in both the training and testing sets. 
+         This split is useful when the goal is to track individuals over time, as it allows for capturing within-person variability and between-person variability. It is particularly relevant when the model will be applied to the same group of individuals.",
+           
+           "subject-wise" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'subject-wise' cross-validation split. In this approach, the data is split such that each subject is either in the training or testing set, but not both. 
+         This split is useful when the aim is to assess the model’s ability to generalize to new, unseen subjects. It ensures that the training and testing sets are independent, making it a better option for evaluating performance in cases where the model needs to generalize across different individuals or populations.",
+           
+           "moving-window" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'moving-window' cross-validation split. This method involves using a rolling window of data for training and testing. 
+         In this split, a fixed-size training set is used, and as the model moves forward in time, the training set is updated, and a new testing set is created. This approach is useful for time-series data or when you want to simulate the model’s performance in a dynamic setting, where the training data gradually changes over time as new information becomes available.
+           Importantly, this split assumes that the model will be updated over time.")
+  })
+  
+  output$output_text_2 <- renderText({
+    switch(input$split_method_own,
+           "row-wise" = "The next step is to assess whether the chosen use case scenario and cross-validation strategy are appropriate for your objectives. 
+         You have selected a 'row-wise' cross-validation strategy, which is particularly useful if your goal is to capture within-person variability. 
+         Below, we have visualized the data and calculated some basic descriptives. Consider whether the outcome shows sufficient variability for your intended use case. If the variability is low, it may be worth shifting to a task that focuses on distinguishing between individuals.",
+           
+           "subject-wise" = "The next step is to evaluate whether the chosen use case scenario and cross-validation strategy are suitable for your objectives. 
+         You have chosen a 'subject-wise' cross-validation strategy, which is particularly useful if your goal is to differentiate between individuals. 
+         TO DO: ADD MORE INFORMATION ABOUT THIS STRATEGY.",
+           
+           "moving-window" = "The next step is to assess whether the chosen use case scenario and cross-validation strategy are appropriate for your objectives. 
+         You have selected a 'moving-window' cross-validation strategy, which is particularly useful for capturing within-person variability over time. 
+         Below, we have visualized the data and calculated some basic descriptives. Consider whether the outcome has sufficient variability for your intended use case. If variability is low, consider shifting to a task focused on distinguishing between individuals.")
+  })
+  
+  output$cv_image <- renderUI({
+    req(input$split_method_own)  # Ensure cv_choice is selected before rendering
+    
+    # Define image path based on input
+    img_src <- switch(input$split_method_own,
+                      "moving-window" = "moving-window.png",
+                      "row-wise" = "Record-wise.png",
+                      "subject-wise" = "Subject-wise.png")
+    tags$img(src = img_src, width = "40%", height = "40%")
+  })
+  
+  ############ Data Upload Logic ##############
   # 1. Create a reactive expression that reads in the CSV file once.
   uploaded_data <- reactive({
     req(input$data_file)
@@ -333,57 +422,14 @@ server <- function(input, output, session) {
   analyzed_data <- eventReactive(input$analyze_data, {
     req(uploaded_data())
     data <- uploaded_data()
-    
+
     data  # Return the (possibly shuffled) dataset.
-    
-    
+
+
   })
   
-  ######### First Section ##########
-  
-  output$output_text_1 <- renderText({
-    switch(input$split_method_own,
-           "row-wise" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'row-wise' cross-validation split. This means that participants are present in both the training and testing sets. 
-         This split is useful when the goal is to track individuals over time, as it allows for capturing within-person variability and between-person variability. It is particularly relevant when the model will be applied to the same group of individuals.",
-           
-           "subject-wise" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'subject-wise' cross-validation split. In this approach, the data is split such that each subject is either in the training or testing set, but not both. 
-         This split is useful when the aim is to assess the model’s ability to generalize to new, unseen subjects. It ensures that the training and testing sets are independent, making it a better option for evaluating performance in cases where the model needs to generalize across different individuals or populations.",
-           
-           "moving-window" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'moving-window' cross-validation split. This method involves using a rolling window of data for training and testing. 
-         In this split, a fixed-size training set is used, and as the model moves forward in time, the training set is updated, and a new testing set is created. This approach is useful for time-series data or when you want to simulate the model’s performance in a dynamic setting, where the training data gradually changes over time as new information becomes available.
-           Importantly, this split assumes that the model will be updated over time.")
-  })
-  
-  output$cv_image <- renderUI({
-    req(input$split_method_own)  # Ensure cv_choice is selected before rendering
-    
-    # Define image path based on input
-    img_src <- switch(input$split_method_own,
-                      "moving-window" = "moving-window.png",
-                      "row-wise" = "Record-wise.png",
-                      "subject-wise" = "Subject-wise.png")
-    tags$img(src = img_src, width = "40%", height = "40%")
-  })
-  
-  ######### Second Section ##########
-  
-  output$output_text_2 <- renderText({
-    switch(input$split_method_own,
-           "row-wise" = "The next step is to assess whether the chosen use case scenario and cross-validation strategy are appropriate for your objectives. 
-         You have selected a 'row-wise' cross-validation strategy, which is particularly useful if your goal is to capture within-person variability. 
-         Below, we have visualized the data and calculated some basic descriptives. Consider whether the outcome shows sufficient variability for your intended use case. If the variability is low, it may be worth shifting to a task that focuses on distinguishing between individuals.",
-           
-           "subject-wise" = "The next step is to evaluate whether the chosen use case scenario and cross-validation strategy are suitable for your objectives. 
-         You have chosen a 'subject-wise' cross-validation strategy, which is particularly useful if your goal is to differentiate between individuals. 
-         TO DO: ADD MORE INFORMATION ABOUT THIS STRATEGY.",
-           
-           "moving-window" = "The next step is to assess whether the chosen use case scenario and cross-validation strategy are appropriate for your objectives. 
-         You have selected a 'moving-window' cross-validation strategy, which is particularly useful for capturing within-person variability over time. 
-         Below, we have visualized the data and calculated some basic descriptives. Consider whether the outcome has sufficient variability for your intended use case. If variability is low, consider shifting to a task focused on distinguishing between individuals.")
-  })
-  
-  
-  ### Descriptive
+  # 4. Render Descriptive Statistics.
+  # Reactive model to be used in both the table and text
   model_data <- reactive({
     req(analyzed_data())
     data <- na.omit(analyzed_data())
@@ -410,7 +456,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # Descriptive Table
+  # Render the table
   output$descriptives <- renderTable({
     model_result <- model_data()
     
@@ -422,7 +468,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # Descriptive text
+  # Render the descriptive text
   output$methods_text <- renderText({
     model_result <- model_data()
     
@@ -430,21 +476,45 @@ server <- function(input, output, session) {
       "A total of ", model_result$num_subjects, " unique subjects are included in the analysis. ",
       "Each subject has a maximum of ", model_result$num_samples, " repeated measurements. ",
       "The mean outcome probability is ", round(model_result$overall_prob_outcome, 3), 
-      " (SD = ", round(model_result$sd_outcome, 3), ")."
+      " (SD = ", round(model_result$sd_outcome, 3), "). ",
+      "The percentage of variation in the outcome that is explained by differences between people is ", 
+      round(model_result$icc_data, 3), "."
     )
   })
-  
-  
-  
   
   output$methods_text_icc <- renderText({
     model_result <- model_data()
     
     paste0(
       "The percentage of variation in the outcome that is explained by differences between people is ", 
-      round(model_result$icc_data, 3), " In the table below, you can find the percentage of variance in the predictors explained by between-person differences."
+      round(model_result$icc_data, 3), "."
     )
   })
+  
+
+  
+  
+  # 5. Render the ICC Table.
+  output$icc_table <- renderDT({
+    req(analyzed_data())
+    data <- na.omit(analyzed_data())
+    
+    # Select features based on the input.
+    feature_names <- colnames(data)[colnames(data) %in% input$n_features_upload]
+    
+    icc_data <- data.frame(variable = feature_names, icc = NA)
+    
+    for (i in seq_along(feature_names)) {
+      model <- lmer(as.formula(paste0(feature_names[i], " ~ 1 + (1|", input$id_variable, ")")), data = data)
+      var_random   <- as.data.frame(VarCorr(model))$vcov[1]
+      var_residual <- attr(VarCorr(model), "sc")^2
+      icc_data$icc[i] <- var_random / (var_random + var_residual)
+     # icc_data$B[i]   <- as.data.frame(VarCorr(model))$sdcor[1]
+      #icc_data$C[i]   <- as.data.frame(VarCorr(model))$sdcor[2]
+    }
+    
+    icc_data
+  },options = list(pageLength = 5))
   
   # 8. Render a Plot of the Uploaded Data.
   output$upload_plot <- renderPlot({
@@ -493,6 +563,7 @@ server <- function(input, output, session) {
       guides(fill = "none")
   }, height = 650, width = 600)
   
+  # Render the dynamic title as extra text
   # Render the dynamic title as extra text
   output$dynamic_title_text <- renderText({
     req(analyzed_data())
@@ -547,37 +618,115 @@ server <- function(input, output, session) {
     
     dynamic_title_text
   })
-
   
-  ######### Third Section ##########
-  #  ICC Table.
-  output$icc_table <- renderDT({
+  
+  
+  ################## Run actual model centered
+  simulation_results_upload <- eventReactive(input$run_sim_upload, {
     req(analyzed_data())
     data <- na.omit(analyzed_data())
     
-    # Select features based on the input.
-    feature_names <- colnames(data)[colnames(data) %in% input$n_features_upload]
+    # Rename columns as needed.
+    colnames(data)[colnames(data) == input$id_variable]    <- "subject"
+    colnames(data)[colnames(data) == input$time_variable]  <- "time"
+    colnames(data)[colnames(data) == input$outcome_variable] <- "y"
     
-    icc_data <- data.frame(variable = feature_names, icc = NA)
+    # Convert subject identifiers to numeric indices if needed.
+    data$subject <- sapply(data$subject, match, unique(unlist(data$subject)))
     
-    for (i in seq_along(feature_names)) {
-      model <- lmer(as.formula(paste0(feature_names[i], " ~ 1 + (1|", input$id_variable, ")")), data = data)
-      var_random   <- as.data.frame(VarCorr(model))$vcov[1]
-      var_residual <- attr(VarCorr(model), "sc")^2
-      icc_data$icc[i] <- var_random / (var_random + var_residual)
-     # icc_data$B[i]   <- as.data.frame(VarCorr(model))$sdcor[1]
-      #icc_data$C[i]   <- as.data.frame(VarCorr(model))$sdcor[2]
+    
+    if(input$split_method_own == "row-wise" |input$split_method_own == "subject-wise" ){
+      return(run_simulation_own(
+        features_sample = data,
+        cv              = input$split_method_own,
+        n_bootstrap     = input$reps_upload,
+        testsize        = input$test_size_upload,
+        n_features      = input$n_features_upload
+      ))
     }
     
-    icc_data
-  },options = list(pageLength = 5))
+   else if(input$split_method_own == "moving-window" ){
+      return(run_simulation_slidingwindow_own(
+        features_sample = data,
+        n_bootstrap     = input$reps_upload,
+        windowsize      = input$windowsize,
+        n_features      = input$n_features_upload
+      ))
+    } else {
+      return(data.frame())
+    }
+  })
   
-
+  output$simulation_results_upload <- renderTable({
+    req(simulation_results_upload())  # Ensure reactive value exists
+    result <- simulation_results_upload()
+    if (is.null(result) || nrow(result) == 0) {
+      return(data.frame(Message = "No results available"))  # Display a message instead of an empty table
+    }
+    
+    return(result)
+  }, include.rownames = TRUE, include.colnames = FALSE) 
   
-  ################## Run Models
   
-  ######### Text and output baseline 1 ##########
-  ## Actual model
+  output$simulation_results_upload1 <- renderTable({
+    req(simulation_results_upload())  # Ensure reactive value exists
+    result <- simulation_results_upload()
+    if (is.null(result) || nrow(result) == 0) {
+      return(data.frame(Message = "No results available"))  # Display a message instead of an empty table
+    }
+    
+    return(result[c("AUC random intercept only:","Accuracy random intercept only:"),])
+  }, include.rownames = TRUE, include.colnames = FALSE) 
+  
+  output$simulation_results_text1 <- renderText({
+    req(simulation_results_upload())  # Ensure reactive value exists
+    result <- simulation_results_upload()
+    
+    # Round the AUC and Accuracy values
+    auc_value <- round(result[c("AUC random intercept only:"),], 2)
+    accuracy_value <- round(result[c("Accuracy random intercept only:"),], 2)
+    
+    if (input$split_method == "row-wise") {
+      if (auc_value > 0.8) {
+        return(paste0("The model's performance needs to be compared with a baseline model to accurately assess its effectiveness and avoid misleading conclusions. 
+        For the model to be clinically useful, it must outperform a simple baseline model. 
+        In this case, a simple random intercept-only baseline model (which includes no predictors) has an overall AUC of ", auc_value, " and an overall accuracy of ", accuracy_value, ". 
+        Thus, the baseline model already demonstrates strong performance. 
+        Given this, it may be necessary to reconsider whether the selected use-case scenario and cross-validation strategy are truly meaningful in practice. 
+        The machine learning model must exceed these values to be considered clinically relevant.")
+        )
+      } else {
+        return(paste0("The model's performance needs to be compared with a baseline model to accurately assess its effectiveness and avoid misleading conclusions. 
+        For the model to be clinically useful, it must outperform a simple baseline model. 
+        In this case, a simple random intercept-only baseline model (which includes no predictors) has an overall AUC of ", auc_value, " and an overall accuracy of ", accuracy_value, ". 
+        Therefore, the machine learning model needs to exceed these values to be clinically relevant.")
+        )
+      }
+      
+    } else if (input$split_method == "subject-wise") {
+      return(paste0("TO DO: ADD BASELINE?"))
+      
+    } else if (input$split_method == "moving-window") {
+      if (auc_value > 0.8) {
+        return(paste0("The model's performance needs to be compared with a baseline model to accurately assess its effectiveness and avoid misleading conclusions. 
+        For the model to be clinically useful, it must outperform a simple baseline model. 
+        In this case, a simple random intercept-only baseline model (which includes no predictors) has an overall AUC of ", auc_value, " and an overall accuracy of ", accuracy_value, ". 
+        Thus, the baseline model already demonstrates strong performance. 
+        Given this, it may be necessary to reconsider whether the selected use-case scenario and cross-validation strategy are truly meaningful in practice. 
+        The machine learning model must exceed these values to be considered clinically relevant. TO DO: ADD WITHIN-PERSON")
+        )
+      } else {
+        return(paste0("The model's performance needs to be compared with a baseline model to accurately assess its effectiveness and avoid misleading conclusions. 
+        For the model to be clinically useful, it must outperform a simple baseline model. 
+        In this case, a simple random intercept-only baseline model (which includes no predictors) has an overall AUC of ", auc_value, " and an overall accuracy of ", accuracy_value, ". 
+        Therefore, the machine learning model needs to exceed these values to be clinically relevant. TO DO: ADD WITHIN-PERSON")
+        )
+      }
+    }
+  })
+  
+  
+  
   
   simulation_results_upload <- eventReactive(input$run_sim_upload, {
     req(analyzed_data())
@@ -614,8 +763,16 @@ server <- function(input, output, session) {
     }
   })
   
+  output$simulation_results_upload <- renderTable({
+    req(simulation_results_upload())  # Ensure reactive value exists
+    result <- simulation_results_upload()
+    if (is.null(result) || nrow(result) == 0) {
+      return(data.frame(Message = "No results available"))  # Display a message instead of an empty table
+    }
+    
+    return(result)
+  }, include.rownames = TRUE, include.colnames = FALSE) 
   
-  ##### BASELINE 1
   
   output$simulation_results_upload1 <- renderTable({
     req(simulation_results_upload())  # Ensure reactive value exists
@@ -774,21 +931,10 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
   
   
   
-  #################### Section 4 ################
-  ####### Table 1 (not centered) ############
-  output$simulation_results_upload <- renderTable({
-    req(simulation_results_upload())  # Ensure reactive value exists
-    result <- simulation_results_upload()
-    if (is.null(result) || nrow(result) == 0) {
-      return(data.frame(Message = "No results available"))  # Display a message instead of an empty table
-    }
-    
-    return(result)
-  }, include.rownames = TRUE, include.colnames = FALSE) 
   
+  ####################
   
-  
-  ######### Model Centered ##########
+  # Run actual model centered
   simulation_results_upload_centered <- eventReactive(input$run_sim_upload, {
     req(analyzed_data())
     data <- na.omit(analyzed_data())
@@ -836,7 +982,6 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
   }, include.rownames = TRUE, include.colnames = FALSE) 
   
   
-  ########## True Result Model text ############
   output$model_results_text <- renderText({
     req(simulation_results_upload())  # Ensure reactive value exists
     result <- simulation_results_upload()
@@ -919,6 +1064,91 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
     # Combine and return the complete text
     return(paste0(within_person_text))
   })
+
+  
+  
+  ###################################################
+  ############# Simulation Results Viz ##############
+  ###################################################
+  
+  
+  data_res <- read.csv("simulation_results.csv")
+
+  
+  # Simulation Results
+  output$plot1 <- renderPlot({
+    
+    
+    if (input$filter_values) {
+      data_res <- subset(data_res, 
+                         A == input$A_viz &
+                         icc >= input$icc_viz[1] & icc <= input$icc_viz[2] &
+                         sd_residual >= input$sd_residual_viz[1] & sd_residual <= input$sd_residual_viz[2] &
+                         mean >= input$mean_viz[1] & mean <= input$mean_viz[2] &
+                         sd_outcome >= input$sd_viz[1] & sd_outcome <= input$sd_viz[2] &
+                         icc_pred >= input$icc_pred_viz[1] & icc_pred <= input$icc_pred_viz[2] &
+                         auc_value_base >= input$auc_value_base_viz[1] & auc_value_base <= input$auc_value_base_viz[2] &
+                         auc >= input$auc_value_viz[1] & auc <= input$auc_value_viz[2] &
+                         auc_individual >= input$auc_individual_mean_viz[1] & auc_individual <= input$auc_individual_mean_viz[2] &
+                         total_n >= input$total_n_viz[1] & total_n <= input$total_n_viz[2] &
+                         auc_c >= input$auc_c_mean_viz[1] & auc_c <= input$auc_c_mean_viz[2] &
+                         auc_c_individual >= input$auc_c_individual_mean_viz[1] & auc_c_individual <= input$auc_c_individual_mean_viz[2] &
+                         sd_intercept >= input$sd_intercept_viz[1] & sd_intercept <= input$sd_intercept_viz[2]
+        )
+      }
+    
+    
+    # Example visualization
+    ggplot(data_res, aes_string(x = input$x_var, y = input$y_var, color = input$color_var)) +
+      geom_point(alpha = 0.5, size = 3) +
+      theme_minimal() +
+      scale_colour_gradientn(colours = c("#2A363B", "#83AF9B", "#C8C8A9", "#F9CDAD", "#FC9D9A", "#FE4365")) +
+      ylab(input$y_var) +
+      xlab(input$x_var) +
+      guides(col = guide_colourbar()) +
+      ggtitle("") +
+      geom_hline(yintercept = 0.5)
+    
+   
+  })
+  
+  # Simulation Results
+  output$plot3 <- renderPlot({
+    # Retrieve data
+    if (input$filter_values) {
+      data_res <- subset(data_res, 
+                     A == input$A_viz &
+                       icc >= input$icc_viz[1] & icc <= input$icc_viz[2] &
+                       sd_residual >= input$sd_residual_viz[1] & sd_residual <= input$sd_residual_viz[2] &
+                       mean >= input$mean_viz[1] & mean <= input$mean_viz[2] &
+                       sd_outcome >= input$sd_viz[1] & sd_outcome <= input$sd_viz[2] &
+                       icc_pred >= input$icc_pred_viz[1] & icc_pred <= input$icc_pred_viz[2] &
+                       auc_value_base >= input$auc_value_base_viz[1] & auc_value_base <= input$auc_value_base_viz[2] &
+                       auc >= input$auc_value_viz[1] & auc <= input$auc_value_viz[2] &
+                       auc_individual >= input$auc_individual_mean_viz[1] & auc_individual <= input$auc_individual_mean_viz[2] &
+                       total_n >= input$total_n_viz[1] & total_n <= input$total_n_viz[2] &
+                       auc_c >= input$auc_c_mean_viz[1] & auc_c <= input$auc_c_mean_viz[2] &
+                       auc_c_individual >= input$auc_c_individual_mean_viz[1] & auc_c_individual <= input$auc_c_individual_mean_viz[2] &
+                       sd_intercept >= input$sd_intercept_viz[1] & sd_intercept <= input$sd_intercept_viz[2]
+      )
+    }
+
+    data_res$auc_diff <- data_res$auc_c_individual - data_res$auc_individual
+    
+    # Example visualization
+    ggplot(data_res, aes_string(x = input$x_var, y = "auc_diff", color = input$color_var)) +
+      geom_point(alpha = 0.5, size = 3) +
+      theme_minimal() +
+      scale_colour_gradientn(colours = c("#2A363B", "#83AF9B", "#C8C8A9", "#F9CDAD", "#FC9D9A", "#FE4365")) +
+      ylab("AUC Difference (Within Person)") +
+      xlab(input$x_var) +
+      guides(col = guide_colourbar()) +
+      ggtitle("") +
+      geom_hline(yintercept = 0)
+    
+  })
+  
+  
 }
 
 
