@@ -44,6 +44,7 @@ C <- 0.1 # Within-subject variability (added within participant for each timepoi
 ################# Data Simulation ################
 ##################################################
 source("Simulation_Functions.R")
+source("/Users/f007qrc/Library/CloudStorage/GoogleDrive-anna.m.langener@dartmouth.edu/My Drive/Darmouth Drive/ML CrossValidation Project/Simulation_Functions_notshiny.R")
 
 features_sample <- create_data(n_features,n_samples,n_subjects,A,feature_std,B,C,overall_prob_outcome,sd_outcome,time_effect)
 features_sample_Astd <- features_sample[[2]]
@@ -52,6 +53,14 @@ features_sample <- features_sample[[1]]
 
 #features_sample_rep <- create_data(n_features,n_samples,n_subjects = n_subjects_rep,n_test,n_train,A,feature_std,B,C,overall_prob_outcome,sd_outcome,time_effect)
 #features_sample <- read.csv("/Users/f007qrc/Library/CloudStorage/GoogleDrive-anna.m.langener@dartmouth.edu/My Drive/Darmouth Drive/ML CrossValidation Project/feature_sample.csv")
+
+# Run the application
+
+library(profvis)
+profvis({
+  
+  sim <- run_simulation(features_sample,"row-wise",1, testsize = 0.3)
+})
 
 sim <- run_simulation(features_sample,"row-wise",1, testsize = 0.3)
 #write.csv(features_sample,"/Users/f007qrc/Library/CloudStorage/GoogleDrive-anna.m.langener@dartmouth.edu/My Drive/Darmouth Drive/ML CrossValidation Project/feature_sample.csv" )

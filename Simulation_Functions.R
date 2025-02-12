@@ -19,8 +19,7 @@ create_data <- function(n_features,n_samples,n_subjects,A,feature_std,B,C,overal
   para <- estBetaParams(overall_prob_outcome,sd_outcome^2)
   prob_l <- rbeta(n=n_subjects ,shape1 = para$alpha, shape2 = para$beta) # sample probability for each subject
   
-  print(paste("Mean prob:",mean(prob_l)))
-  print(paste("SD prob:",sd(prob_l)))
+
   
   prob_l = rep(prob_l, each = n_samples) 
 
@@ -107,27 +106,20 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   pred_list_base <- list() 
   ind_base <- list()
   
-  print(cv)
-  
+
   features_sample <- na.omit(features_sample)
 
   for (i in 1:n_bootstrap) {
   n_subjects  = length(unique(features_sample$subject))
-  print(n_subjects)
   n_samples  = length(unique(features_sample$time))
-  print(n_samples)
   n_features = n_features
   
   #### Row wise and subject wise ####
   #  Prepare training and testing sets
-    if(cv == "row-wise"){
+    if(cv == "record-wise"){
       samples_test <- sample(x =nrow(features_sample), size = floor(testsize * nrow(features_sample))) 
       samples_train <- setdiff(1:(nrow(features_sample)), samples_test) 
-      
-      print(length(samples_train))
-      print(length(samples_test))
-      print(nrow(features_sample))
-      
+     
       train_X = features_sample[samples_train, 1:n_features]
       test_X = features_sample[samples_test, 1:n_features]
       
@@ -151,7 +143,7 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
     }  
     
     # Train and evaluate the Random Forest model  
-    if(cv == "subject-wise" | cv == "row-wise"){
+    if(cv == "subject-wise" | cv == "record-wise"){
   
       
       RF <- randomForest(train_X,train_Y,na.action=na.omit)
@@ -165,8 +157,8 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
       
-      # Baseline model for row-wise CV
-      if(cv == "row-wise"){ 
+      # Baseline model for record-wise CV
+      if(cv == "record-wise"){ 
         Baseline <- glmer(
           train_Y ~ 1 + (1 | subject),
           data = features_sample[samples_train,], 
@@ -188,12 +180,6 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
     }
   } # end bootstrap
 
-  if(cv == "row-wise"){ 
-    print(paste("Baseline Mean AUC:",mean(auc_value_base, na.rm = TRUE)))
-    print(paste("Baseline Mean Accuracy:",mean(acc_base, na.rm = TRUE)))
-    print("Model Results:")
-    
-  }
   
   results_summary <- lapply(ind, function(ind_result) {
     processed <- ind_result %>%
@@ -245,10 +231,6 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  print(paste("Mean AUC:",mean(auc_value)))
-  print(paste("Mean Accuracy:",mean(acc)))
-  print("Individual Results Summary:")
-  print(overall_summary)
   return(results_shiny)
 } 
 ############################################
@@ -269,8 +251,7 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
   pred_list_base <- list() 
   ind_base <- list()
   
-  print(cv)
-  
+ 
   for (i in 1:n_bootstrap) {
     n_subjects  = length(unique(features_sample$subject))
     n_samples  = length(unique(features_sample$time))
@@ -308,7 +289,7 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
       select(all_of(names(train_X)))
     
     # Train and evaluate the Random Forest model  
-    if(cv == "row-wise"){
+    if(cv == "record-wise"){
       RF <- randomForest(train_X,train_Y)
       class_pred <- predict(RF, test_X)
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
@@ -320,8 +301,8 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
       
-      # Baseline model for row-wise CV
-      if(cv == "row-wise"){ 
+      # Baseline model for record-wise CV
+      if(cv == "record-wise"){ 
         Baseline <- glmer(
           train_Y ~ 1 + (1 | subject),
           data = features_sample[samples_train,], 
@@ -342,14 +323,7 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
       }
     }
   } # end bootstrap
-  
-  if(cv == "row-wise"){ 
-    print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-    print(paste("Baseline Mean Accuracy:",mean(acc_base, na.rm = TRUE)))
-    print("Model Results:")
-    
-  }
-  
+
   results_summary <- lapply(ind, function(ind_result) {
     processed <- ind_result %>%
       group_by(subject) %>%
@@ -393,10 +367,7 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  print(paste("Mean AUC:",mean(auc_value)))
-  print(paste("Mean Accuracy:",mean(acc)))
-  print("Individual Results Summary:")
-  print(overall_summary)
+
   return(results_shiny)
 }      
 
@@ -445,8 +416,7 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
   n_samples  = length(unique(features_sample$time))
   n_features = n_features
   
-  print("sliding-window")
-  
+
   for (i in 1:n_bootstrap) {
     #  Prepare training and testing sets
     timeSlices <- SlidingWindow_CV(n_samples,windowsize,1) #window size, prediction horizon
@@ -522,11 +492,9 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
       )
       
       
-      print(paste("Window ",k,": ","Model: ", round(auc_value_sw[k],2), " Baseline: ",round(auc_value_base_sw[k],2), sep = ""))
-      
+
     }
     
-    print(ind_t$true)
     auc_value[i] <- auc(roc(as.numeric(as.character(ind_t$true)), as.numeric(as.character(ind_t$pred)), quiet = TRUE))
     auc_value_meansw[i] <- mean(auc_value_sw,na.rm = TRUE)
     ind[[i]] <- ind_t
@@ -585,13 +553,7 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  
-  
-  print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-  print("Model Results:")
-  print(paste("Mean AUC:",mean(auc_value)))
-  print("Individual Results Summary:")
-  print(overall_summary)
+
   return(results_shiny)
 }      
 
@@ -615,8 +577,7 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
   n_samples  = length(unique(features_sample$time))
   n_features = n_features
   
-  print("sliding-window")
-  
+
   for (i in 1:n_bootstrap) {
     #  Prepare training and testing sets
     timeSlices <- SlidingWindow_CV(n_samples,windowsize,1) #window size, prediction horizon
@@ -710,11 +671,9 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
       )
       
       
-      print(paste("Window ",k,": ","Model: ", round(auc_value_sw[k],2), " Baseline: ",round(auc_value_base_sw[k],2), sep = ""))
-      
+
     }
     
-    print(ind_t$true)
     auc_value[i] <- auc(roc(as.numeric(as.character(ind_t$true)), as.numeric(as.character(ind_t$pred)), quiet = TRUE))
     auc_value_meansw[i] <- mean(auc_value_sw,na.rm = TRUE)
     ind[[i]] <- ind_t
@@ -773,13 +732,6 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  
-  
-  print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-  print("Model Results:")
-  print(paste("Mean AUC:",mean(auc_value)))
-  print("Individual Results Summary:")
-  print(overall_summary)
   return(results_shiny)
 }      
 

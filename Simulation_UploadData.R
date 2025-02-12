@@ -52,20 +52,16 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
   
   for (i in 1:n_bootstrap) {
     n_subjects  = length(unique(features_sample$subject))
-    print(n_subjects)
     n_samples  = length(unique(features_sample$time))
-    print(n_samples)
-    
+
     
     #### Row wise and subject wise ####
     #  Prepare training and testing sets
-    if(cv == "row-wise"){
+    if(cv == "record-wise"){
       samples_test <- sample(x =nrow(features_sample), size = floor(testsize * nrow(features_sample))) 
       samples_train <- setdiff(1:(nrow(features_sample)), samples_test) 
       
-      print(length(samples_train))
-      print(length(samples_test))
-      print(nrow(features_sample))
+
       
       
       train_X = features_sample[samples_train, which(colnames(features_sample) %in% n_features)]
@@ -91,7 +87,7 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
     }  
     
     # Train and evaluate the Random Forest model  
-    if(cv == "subject-wise" | cv == "row-wise"){
+    if(cv == "subject-wise" | cv == "record-wise"){
       
       
       RF <- randomForest(train_X,train_Y,na.action=na.omit)
@@ -105,8 +101,8 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
       
-      # Baseline model for row-wise CV
-      if(cv == "row-wise"){ 
+      # Baseline model for record-wise CV
+      if(cv == "record-wise"){ 
         Baseline <- glmer(
           train_Y ~ 1 + (1 | subject),
           data = features_sample[samples_train,], 
@@ -128,11 +124,8 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
     }
   } # end bootstrap
   
-  if(cv == "row-wise"){ 
-    print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-    print(paste("Baseline Mean Accuracy:",mean(acc_base)))
-    print("Model Results:")
-    
+  if(cv == "record-wise"){ 
+
   }
   
   results_summary <- lapply(ind, function(ind_result) {
@@ -185,10 +178,6 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  print(paste("Mean AUC:",mean(auc_value)))
-  print(paste("Mean Accuracy:",mean(acc)))
-  print("Individual Results Summary:")
-  print(overall_summary)
   return(results_shiny)
 } 
 ############################################
@@ -209,7 +198,7 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
   pred_list_base <- list() 
   ind_base <- list()
   
-  print(cv)
+
   
   for (i in 1:n_bootstrap) {
     #### Row wise and subject wise ####
@@ -244,7 +233,7 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
       select(all_of(names(train_X)))
     
     # Train and evaluate the Random Forest model  
-    if(cv == "row-wise"){
+    if(cv == "record-wise"){
       RF <- randomForest(train_X,train_Y)
       class_pred <- predict(RF, test_X)
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
@@ -256,8 +245,8 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
       
-      # Baseline model for row-wise CV
-      if(cv == "row-wise"){ 
+      # Baseline model for record-wise CV
+      if(cv == "record-wise"){ 
         Baseline <- glmer(
           train_Y ~ 1 + (1 | subject),
           data = features_sample[samples_train,], 
@@ -278,13 +267,7 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
       }
     }
   } # end bootstrap
-  
-  if(cv == "row-wise"){ 
-    print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-    print(paste("Baseline Mean Accuracy:",mean(acc_base)))
-    print("Model Results:")
-    
-  }
+
   
   results_summary <- lapply(ind, function(ind_result) {
     processed <- ind_result %>%
@@ -329,10 +312,7 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  print(paste("Mean AUC:",mean(auc_value)))
-  print(paste("Mean Accuracy:",mean(acc)))
-  print("Individual Results Summary:")
-  print(overall_summary)
+
   return(results_shiny)
 }      
 
@@ -383,8 +363,6 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
   
   n_samples  = length(unique(features_sample$time))
 
-  print("sliding-window")
-  
   for (i in 1:n_bootstrap) {
     #  Prepare training and testing sets
     timeSlices <- SlidingWindow_CV(n_samples,windowsize,1) #window size, prediction horizon
@@ -403,6 +381,7 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
     ind_t_base <- data.frame()
     
     for(k in 1:length(trainSlices)){
+      tryCatch({
       train_X = features_sample[features_sample$time %in% trainSlices[[k]], which(colnames(features_sample) %in% n_features)]
       test_X = features_sample[features_sample$time %in% testSlices[[k]], which(colnames(features_sample) %in% n_features)]
       train_Y = as.factor(features_sample$y[features_sample$time %in% trainSlices[[k]]])
@@ -458,16 +437,15 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
           pred = class_pred_base
         )
       )
-      
-      
-      print(paste("Window ",k,": ","Model: ", round(auc_value_sw[k],2), " Baseline: ",round(auc_value_base_sw[k],2), sep = ""))
-      
+      }, error = function(e) {
+        message(paste("Skipping iteration", k, "due to error:", e$message))
+      })
     }
-    
-    print(ind_t$true)
+
     auc_value[i] <- auc(roc(as.numeric(as.character(ind_t$true)), as.numeric(as.character(ind_t$pred)), quiet = TRUE))
     auc_value_meansw[i] <- mean(auc_value_sw,na.rm = TRUE)
     ind[[i]] <- ind_t
+    ind_base[[i]] <- ind_t_base
     auc_value_base[i] <- auc(roc(as.numeric(as.character(ind_t_base$true)), as.numeric(as.character(ind_t_base$pred)), quiet = TRUE))
     acc_sw <- mean(acc_sw, na.rm = TRUE)
     acc_base <- mean(acc_sw_base, na.rm = TRUE)
@@ -523,13 +501,7 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
-  
-  
-  print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-  print("Model Results:")
-  print(paste("Mean AUC:",mean(auc_value)))
-  print("Individual Results Summary:")
-  print(overall_summary)
+  results_shiny <- list(results_shiny,ind_base)
   return(results_shiny)
 }      
 
@@ -553,8 +525,7 @@ run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstr
   
   n_samples  = length(unique(features_sample$time))
   
-  print("sliding-window")
-  
+
   for (i in 1:n_bootstrap) {
     #  Prepare training and testing sets
     timeSlices <- SlidingWindow_CV(n_samples,windowsize,1) #window size, prediction horizon
@@ -572,86 +543,79 @@ run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstr
     ind_t <- data.frame()
     ind_t_base <- data.frame()
     
-    for(k in 1:length(trainSlices)){
-      train_X = features_sample[features_sample$time %in% trainSlices[[k]], which(colnames(features_sample) %in% n_features)]
-      test_X = features_sample[features_sample$time %in% testSlices[[k]], which(colnames(features_sample) %in% n_features)]
-      train_Y = as.factor(features_sample$y[features_sample$time %in% trainSlices[[k]]])
-      test_Y = as.factor(features_sample$y[features_sample$time %in% testSlices[[k]]])
-      
-      # Center the training set
-      subject_means <- features_sample[features_sample$time %in% trainSlices[[k]],] %>%
-        group_by(subject) %>%
-        summarise(across(all_of(names(train_X)), mean), .groups = "drop")
-      
-      # Center the training set
-      train_X <- features_sample[features_sample$time %in% trainSlices[[k]],] %>%
-        left_join(subject_means, by = "subject", suffix = c("", "_mean")) %>%
-        mutate(across(all_of(names(train_X)), ~ . - get(paste0(cur_column(), "_mean")))) %>%
-        select(all_of(names(train_X)))
-      
-      # Center the test set using training set means
-      test_X <- features_sample[features_sample$time %in% testSlices[[k]],] %>%
-        left_join(subject_means, by = "subject", suffix = c("", "_mean")) %>%
-        mutate(across(all_of(names(train_X)), ~ . - get(paste0(cur_column(), "_mean")))) %>%
-        select(all_of(names(train_X)))
-      
-      # Train and evaluate the Random Forest model 
-      
-      RF <- randomForest(train_X,train_Y)
-      class_pred <- predict(RF, test_X)
-      acc_sw[k] <- mean(as.numeric(as.character(class_pred)) == test_Y)
-      
-      if (length(unique(test_Y)) == 2) {
-        roc_curve <- roc(test_Y, as.numeric(as.character(class_pred)), quiet = TRUE)
-        auc_value_sw[k] <- auc(roc_curve)
-      } else {
-        auc_value_sw[k] <- NA
-      }
-      
-      ind_t <- rbind(
-        ind_t,
-        data.frame(
-          subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
-          true = test_Y,                                   
-          pred = class_pred
+    for (k in 1:length(trainSlices)) {
+      tryCatch({
+        train_X <- features_sample[features_sample$time %in% trainSlices[[k]], which(colnames(features_sample) %in% n_features)]
+        test_X <- features_sample[features_sample$time %in% testSlices[[k]], which(colnames(features_sample) %in% n_features)]
+        train_Y <- as.factor(features_sample$y[features_sample$time %in% trainSlices[[k]]])
+        test_Y <- as.factor(features_sample$y[features_sample$time %in% testSlices[[k]]])
+        
+        subject_means <- features_sample[features_sample$time %in% trainSlices[[k]],] %>%
+          group_by(subject) %>%
+          summarise(across(all_of(names(train_X)), mean), .groups = "drop")
+        
+        train_X <- features_sample[features_sample$time %in% trainSlices[[k]],] %>%
+          left_join(subject_means, by = "subject", suffix = c("", "_mean")) %>%
+          mutate(across(all_of(names(train_X)), ~ . - get(paste0(cur_column(), "_mean")))) %>%
+          select(all_of(names(train_X)))
+        
+        test_X <- features_sample[features_sample$time %in% testSlices[[k]],] %>%
+          left_join(subject_means, by = "subject", suffix = c("", "_mean")) %>%
+          mutate(across(all_of(names(train_X)), ~ . - get(paste0(cur_column(), "_mean")))) %>%
+          select(all_of(names(train_X)))
+        
+        RF <- randomForest(train_X, train_Y)
+        class_pred <- predict(RF, test_X)
+        acc_sw[k] <- mean(as.numeric(as.character(class_pred)) == test_Y)
+        
+        if (length(unique(test_Y)) == 2) {
+          roc_curve <- roc(test_Y, as.numeric(as.character(class_pred)), quiet = TRUE)
+          auc_value_sw[k] <- auc(roc_curve)
+        } else {
+          auc_value_sw[k] <- NA
+        }
+        
+        ind_t <- rbind(
+          ind_t,
+          data.frame(
+            subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
+            true = test_Y,
+            pred = class_pred
+          )
         )
-      )
-      
-      #### Baseline
-      Baseline <- glmer(
-        "y ~ 1 + (1|subject)", # Random intercept for 'subject'
-        data = features_sample[features_sample$time %in% trainSlices[[k]],], 
-        family = "binomial" # Logistic regression
-      )
-      
-      class_pred_base <- predict(Baseline, newdata = features_sample[features_sample$time %in% testSlices[[k]],], re.form = ~(1 | subject), type = "response")
-      
-      if (length(unique(test_Y)) == 2) {
-        roc_curve_base <- roc(test_Y,  as.numeric(as.character(class_pred_base)),quiet = TRUE)
-        auc_value_base_sw[k] <- auc(roc_curve_base)
-      } else {
-        auc_value_base_sw[k] <- NA
-      }
-      
-      class_pred_base2 <- ifelse(class_pred_base > 0.5, 1, 0)
-      acc_sw_base[k] <- mean(as.numeric(as.character(class_pred_base2)) == test_Y)
-      
-      
-      ind_t_base <- rbind(
-        ind_t_base,
-        data.frame(
-          subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
-          true = test_Y,                                   
-          pred = class_pred_base
+        
+        Baseline <- glmer(
+          "y ~ 1 + (1|subject)",
+          data = features_sample[features_sample$time %in% trainSlices[[k]],],
+          family = "binomial"
         )
-      )
-      
-      
-      print(paste("Window ",k,": ","Model: ", round(auc_value_sw[k],2), " Baseline: ",round(auc_value_base_sw[k],2), sep = ""))
-      
+        
+        class_pred_base <- predict(Baseline, newdata = features_sample[features_sample$time %in% testSlices[[k]],], re.form = ~(1 | subject), type = "response")
+        
+        if (length(unique(test_Y)) == 2) {
+          roc_curve_base <- roc(test_Y, as.numeric(as.character(class_pred_base)), quiet = TRUE)
+          auc_value_base_sw[k] <- auc(roc_curve_base)
+        } else {
+          auc_value_base_sw[k] <- NA
+        }
+        
+        class_pred_base2 <- ifelse(class_pred_base > 0.5, 1, 0)
+        acc_sw_base[k] <- mean(as.numeric(as.character(class_pred_base2)) == test_Y)
+        
+        ind_t_base <- rbind(
+          ind_t_base,
+          data.frame(
+            subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
+            true = test_Y,
+            pred = class_pred_base
+          )
+        )
+      }, error = function(e) {
+        message(paste("Skipping iteration", k, "due to error:", e$message))
+      })
     }
     
-    print(ind_t$true)
+    
     auc_value[i] <- auc(roc(as.numeric(as.character(ind_t$true)), as.numeric(as.character(ind_t$pred)), quiet = TRUE))
     auc_value_meansw[i] <- mean(auc_value_sw,na.rm = TRUE)
     ind[[i]] <- ind_t
@@ -711,12 +675,6 @@ run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstr
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy:", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
   
   
-  
-  print(paste("Baseline Mean AUC:",mean(auc_value_base)))
-  print("Model Results:")
-  print(paste("Mean AUC:",mean(auc_value)))
-  print("Individual Results Summary:")
-  print(overall_summary)
   return(results_shiny)
 }      
 
