@@ -1,4 +1,5 @@
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+renv::restore()
 
 library(shiny)
 library(bslib)
@@ -13,7 +14,6 @@ library(shinycssloaders)
 library(DT)
 library(shinyjs)
 
-renv::restore()
 
 source("Simulation_Functions.R")
 source("Simulation_UploadData.R")
