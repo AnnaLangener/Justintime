@@ -15,13 +15,15 @@ To run the app on your local machine, follow these steps;
 
 2.  Run the following code;
 
-    `if (!requireNamespace("shiny", quietly = TRUE)) {
+    ```{r}
+    if (!requireNamespace("shiny", quietly = TRUE)) {
       install.packages("shiny")
-    }`
+    }
 
-    `library("shiny")`
+    library("shiny")
 
-    `runGitHub("AnnaLangener/Justintime")`
+    runGitHub("AnnaLangener/Justintime")
+    ```
 
 ## Overview of important files;
 
