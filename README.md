@@ -25,7 +25,7 @@ To run the app on your local machine, follow these steps;
     runGitHub("AnnaLangener/Justintime")
     ```
 
-## Overview of important files;
+## Overview of important files
 
 -   **app.R**: Contains the Shiny app code.
 -   **Simulation_Functions.R**: Includes functions to run custom simulations (Tab: *Create Simulated Data*).
