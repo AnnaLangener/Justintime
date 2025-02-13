@@ -230,7 +230,7 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
   results_shiny <- t(as.data.frame(results_shiny))
   colnames(results_shiny) <- NULL
   rownames(results_shiny) <- c("AUC random intercept only:", "Accuracy random intercept only:", "AUC:", "Accuracy", "Mean AUC within-person:", "SD AUC within-person:", "% of AUC > 0.5 within-person:", "N included within-person:")
-  
+
   return(results_shiny)
 } 
 ############################################

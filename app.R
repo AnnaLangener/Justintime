@@ -1,26 +1,21 @@
-library(shiny)
-library(bslib)
+# library(shiny)
+# library(bslib)
+# library(randomForest)
+# library(dplyr)
+# library(lme4)
+# library(caret)
+# library(pROC)
+# library(boot)
+# library(ggplot2)
+# library(shinycssloaders)
+# library(DT)
+# library(shinyjs)
 
-library(randomForest)
-library(foreach)
-library(dplyr)
-library(lme4)
-library(tseries)
-library(caret)
-library(pROC)
-library(boot)
+if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+renv::restore()
 
 source("Simulation_Functions.R")
 source("Simulation_UploadData.R")
-library(shiny)
-library(bslib)
-library(ggplot2)
-library(dplyr)
-library(lme4)
-library(tseries)
-library(shinycssloaders)
-library(DT)
-library(shinyjs)
 
 # Define UI for application
 ui <- fluidPage(
@@ -372,7 +367,7 @@ server <- function(input, output, session) {
   
   simulation_results <- eventReactive(input$run_sim, {
     req(generated_features())
-    
+  
     if(input$split_method == "record-wise" |input$split_method == "subject-wise" ){
       return(run_simulation(
         features_sample = generated_features(),
@@ -381,6 +376,7 @@ server <- function(input, output, session) {
         testsize = input$test_size,
         n_features = input$n_features_sim
       ))
+      
     }
    
     else if(input$split_method == "moving-window" ){
@@ -393,7 +389,8 @@ server <- function(input, output, session) {
     } else {
       return(data.frame()) 
     }
-  })
+  
+   })
   
   simulation_results_centered <- eventReactive(input$run_sim, {
     req(generated_features())
@@ -416,7 +413,7 @@ server <- function(input, output, session) {
     } else {
       return(data.frame())
     }
-  })
+    print(mem_used())})
   
   
   output$simulation_results <- renderTable({
