@@ -1,23 +1,23 @@
-# library(shiny)
-# library(bslib)
-# library(randomForest)
-# library(dplyr)
-# library(lme4)
-# library(caret)
-# library(pROC)
-# library(boot)
-# library(ggplot2)
-# library(shinycssloaders)
-# library(DT)
-# library(shinyjs)
-
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+
+library(shiny)
+library(bslib)
+library(randomForest)
+library(dplyr)
+library(lme4)
+library(caret)
+library(pROC)
+library(boot)
+library(ggplot2)
+library(shinycssloaders)
+library(DT)
+library(shinyjs)
+
 renv::restore()
 
 source("Simulation_Functions.R")
 source("Simulation_UploadData.R")
 
-# Define UI for application
 ui <- fluidPage(
   useShinyjs(), 
   theme = bs_theme(version = 5, bootswatch = "journal"),
