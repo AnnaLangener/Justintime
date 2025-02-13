@@ -1,0 +1,1 @@
+Repository for the Shiny app accompanies the paper 'Just in Time or Just a Guess? Addressing Challenges in Validating Prediction Models Based on Longitudinal Data (in prep, Langener & Jacobson, 2025)'. 
