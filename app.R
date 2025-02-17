@@ -1,9 +1,7 @@
-#renv::activate()
+#renv::load()
+#if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 
-renv::load()
-if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
-
-renv::restore()
+#renv::restore()
 
 library(shiny)
 library(bslib)
@@ -472,14 +470,14 @@ server <- function(input, output, session) {
   output$output_text_1 <- renderText({
     switch(input$split_method_own,
            "record-wise" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'record-wise' cross-validation split. This means that participants are present in both the training and testing sets. 
-         This split is useful when the goal is to track individuals over time, as it allows for capturing within-person variability and between-person variability. It is particularly relevant when the model will be applied to the same group of individuals.",
+         This split is useful when the goal is to track individuals over time, as it allows for capturing within-person variability and between-person variability. It is particularly relevant when the model will be applied to the same group of individuals, provided certain assumptions hold. One key assumption is stationarity in the distribution of both the outcome and predictor variables, as well as their relationship. If you expect non-stationarity consider changing your cross-validation splt. ",
            
            "subject-wise" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'subject-wise' cross-validation split. In this approach, the data is split such that each subject is either in the training or testing set, but not both. 
          This split is useful when the aim is to assess the model’s ability to generalize to new, unseen subjects. It ensures that the training and testing sets are independent, making it a better option for evaluating performance in cases where the model needs to generalize across different individuals or populations.",
            
            "moving-window" = "Choosing a cross-validation strategy that aligns with your specific use case and study objectives is important for ensuring meaningful results. You selected a 'moving-window' cross-validation split. This method involves using a moving window of data for training and testing. 
          In this split, a fixed-size training set is used, and as the model moves forward in time, the training set is updated, and a new testing set is created. This approach is useful for time-series data or when you want to simulate the model’s performance in a dynamic setting, where the training data gradually changes over time as new information becomes available.
-           Importantly, this split assumes that the model will be updated over time.")
+           Importantly, this split often assumes that the model will be updated over time.")
   })
   
   output$cv_image <- renderUI({
