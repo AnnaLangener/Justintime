@@ -1,6 +1,8 @@
 #renv::activate()
 
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+Sys.setenv(RENV_CONFIG_AUTOLOADER_ENABLED = FALSE)
+
 renv::restore()
 
 library(shiny)
