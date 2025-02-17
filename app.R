@@ -1,4 +1,5 @@
-#renv::init()
+renv::activate()
+
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 renv::restore()
 
