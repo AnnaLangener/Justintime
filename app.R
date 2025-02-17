@@ -1,7 +1,7 @@
-#renv::load()
-#if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+renv::load()
+if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 
-#renv::restore()
+renv::restore()
 
 library(shiny)
 library(bslib)
