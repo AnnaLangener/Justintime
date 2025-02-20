@@ -13,7 +13,7 @@ To run the app on your local machine, follow these steps;
 
 1.  Make sure you have R installed. If not, you can download it here: <https://cran.rstudio.com/>
 
-2.  Run the following code;
+2.  Run the following code in the **terminal**;
 
     ```{r}
     if (!requireNamespace("shiny", quietly = TRUE)) {
