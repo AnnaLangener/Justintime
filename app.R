@@ -128,9 +128,6 @@ ui <- fluidPage(
                            "For the moving-window method, this defines how many timepoints are included in each sliding window.", 
                            placement = "right"),
                    
-                   tooltip(numericInput("replications", "Number of Replications:", value = 1, min = 1, step = 1),
-                           "DELETE? The number of times the simulation should be repeated. This can be used to increase the robustness of the results.",
-                           placement = "right"),
                    
                    actionButton("generate_data", "Generate Data"),
                    actionButton("run_sim", "Run Model")
@@ -192,10 +189,7 @@ ui <- fluidPage(
                  tooltip(numericInput("windowsize", "Window size (moving-window only, timepoints):", value = 14, min = 1, max = 100, step = 1),
                          "For the moving-window method, this defines how many timepoints are included in each sliding window.", 
                          placement = "right"),
-                 
-                 tooltip(numericInput("reps_upload", "Number of Replications:", value = 1, min = 1, step = 1),
-                         "DELETE? The number of times the simulation should be repeated. This can be used to increase the robustness of the results.",
-                         placement = "right"),
+   
                  actionButton("run_sim_upload", "Run Diagnostics")
                ),
                
@@ -284,8 +278,7 @@ server <- function(input, output, session) {
         "Within-Subject Variability (C)",
         "Data Split Method",
         "Test Set Size (Proportion)",
-        "Window Size (Moving-Window Only)",
-        "Number of Replications"
+        "Window Size (Moving-Window Only)"
       ),
       "Description" = c(
         "Number of variables/features/predictors included in the analysis. These features are used to predict the outcome.",
@@ -299,9 +292,7 @@ server <- function(input, output, session) {
         "Reflects variability within subjects across timepoints and features.",
         "Choose how the data will be split: 'record-wise' for splitting by individual data points, 'subject-wise' for splitting by participants, or 'moving-window' for a sliding time window.",
         "The proportion of the dataset allocated to the test set. Only relevant for 'record-wise' and 'subject-wise' data split methods.",
-        "For the moving-window method, this defines how many timepoints are included in each sliding window.",
-        "The number of times the simulation should be repeated. This can be used to increase the robustness of the results."
-      ),
+        "For the moving-window method, this defines how many timepoints are included in each sliding window."      ),
       stringsAsFactors = FALSE
     )
   })
@@ -374,7 +365,7 @@ server <- function(input, output, session) {
       return(run_simulation(
         features_sample = generated_features(),
         cv = input$split_method,
-        n_bootstrap = input$replications,
+        n_bootstrap = 1,
         testsize = input$test_size,
         n_features = input$n_features_sim
       ))
@@ -384,7 +375,7 @@ server <- function(input, output, session) {
     else if(input$split_method == "moving-window" ){
       return(run_simulation_slidingwindow(
         features_sample = generated_features(),
-        n_bootstrap = input$replications,
+        n_bootstrap = 1,
         windowsize = input$windowsize_sim,
         n_features = input$n_features_sim
       ))
@@ -400,7 +391,7 @@ server <- function(input, output, session) {
       return(run_simulation_centering(
           features_sample = generated_features(),
           cv = input$split_method,
-          n_bootstrap = input$replications,
+          n_bootstrap = 1,
           testsize = input$test_size
         ))
     }
@@ -408,7 +399,7 @@ server <- function(input, output, session) {
     else if(input$split_method == "moving-window" ){
       return(run_simulation_slidingwindow_centering(
         features_sample = generated_features(),
-        n_bootstrap = input$replications,
+        n_bootstrap = 1,
         windowsize = input$windowsize_sim,
         n_features = input$n_features_sim
       ))
@@ -750,7 +741,7 @@ server <- function(input, output, session) {
       return(run_simulation_own(
         features_sample = data,
         cv              = input$split_method_own,
-        n_bootstrap     = input$reps_upload,
+        n_bootstrap     = 1,
         testsize        = input$test_size_upload,
         n_features      = input$n_features_upload
       ))
@@ -759,7 +750,7 @@ server <- function(input, output, session) {
    else if(input$split_method_own == "moving-window" ){
       return(run_simulation_slidingwindow_own(
         features_sample = data,
-        n_bootstrap     = input$reps_upload,
+        n_bootstrap     = 1,
         windowsize      = input$windowsize,
         n_features      = input$n_features_upload
       ))
@@ -894,7 +885,7 @@ server <- function(input, output, session) {
       return(run_simulation_own(
         features_sample = data,
         cv              = input$split_method_own,
-        n_bootstrap     = input$reps_upload,
+        n_bootstrap     = 1,
         testsize        = input$test_size_upload,
         n_features      = input$n_features_upload
       ))
@@ -903,7 +894,7 @@ server <- function(input, output, session) {
     else if(input$split_method_own == "moving-window" ){
       return(run_simulation_slidingwindow_own(
         features_sample = data,
-        n_bootstrap     = input$reps_upload,
+        n_bootstrap     = 1,
         windowsize      = input$windowsize,
         n_features      = input$n_features_upload
       ))
@@ -1009,7 +1000,7 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
       return(run_simulation_centering_own(
         features_sample = data,
         cv              = input$split_method_own,
-        n_bootstrap     = input$reps_upload,
+        n_bootstrap     = 1,
         testsize        = input$test_size_upload,
         n_features      = input$n_features_upload
       ))
@@ -1018,7 +1009,7 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
     else if(input$split_method_own == "moving-window" ){
       return(run_simulation_slidingwindow_own_centering(
         features_sample = data,
-        n_bootstrap     = input$reps_upload,
+        n_bootstrap     = 1,
         windowsize      = input$windowsize,
         n_features      = input$n_features_upload
       ))
