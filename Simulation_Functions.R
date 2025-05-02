@@ -71,13 +71,13 @@ create_data <- function(n_features,n_samples,n_subjects,A,feature_std,B,C,overal
   # Center the training set
   subject_means <- features_sample[[1]] %>%
     group_by(subject) %>%
-    summarise(across(all_of(colnames(features_sample[[1]][,1:10])), mean), .groups = "drop")
+    summarise(across(all_of(colnames(features_sample[[1]][,1:n_features])), mean), .groups = "drop")
   
   # Center the training set
   features_sample[[3]] <- features_sample[[1]] %>%
     left_join(subject_means, by = "subject", suffix = c("", "_mean")) %>%
-    mutate(across(all_of(colnames(features_sample[[1]][,1:10])), ~ . - get(paste0(cur_column(), "_mean")))) %>%
-    select(all_of(colnames(features_sample[[1]][,1:10])),"subject","time","y","A")
+    mutate(across(all_of(colnames(features_sample[[1]][,1:n_features])), ~ . - get(paste0(cur_column(), "_mean")))) %>%
+    select(all_of(colnames(features_sample[[1]][,1:n_features])),"subject","time","y","A")
   
   return(features_sample[[1]])
 }

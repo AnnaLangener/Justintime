@@ -528,6 +528,7 @@ server <- function(input, output, session) {
    
     #data <- na.omit(analyzed_data())
     data <- analyzed_data()
+    print(unique(data[[input$id_variable]]))
   
     overall_prob_outcome <- mean(data[[input$outcome_variable]], na.rm = TRUE)
     
@@ -699,7 +700,7 @@ server <- function(input, output, session) {
   output$icc_table <- DT::renderDT({
     if(input$split_method_own == "record-wise" | input$split_method_own == "moving-window"){
     req(analyzed_data())
-    data <- na.omit(analyzed_data())
+    data <- analyzed_data()
     
     # Select features based on the input.
     feature_names <- colnames(data)[colnames(data) %in% input$n_features_upload]
@@ -728,7 +729,7 @@ server <- function(input, output, session) {
   
   simulation_results_upload <- eventReactive(input$run_sim_upload, {
     req(analyzed_data())
-    data <- na.omit(analyzed_data())
+    data <- analyzed_data()
     
     # Rename columns as needed.
     colnames(data)[colnames(data) == input$id_variable]    <- "subject"
@@ -871,7 +872,7 @@ server <- function(input, output, session) {
   #### Baseline 2 (SHUFFLED!!!!)
   simulation_baseline_upload <- eventReactive(input$run_sim_upload, {
     req(analyzed_data())
-    data <- na.omit(analyzed_data())
+    data <- analyzed_data()
     data <- shuffle_data(data, subject_var = input$id_variable, outcome_var = input$outcome_variable)
     
     # Rename columns as needed.
@@ -987,7 +988,7 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
   ######### Model Centered ##########
   simulation_results_upload_centered <- eventReactive(input$run_sim_upload, {
     req(analyzed_data())
-    data <- na.omit(analyzed_data())
+    data <- analyzed_data()
     
     # Rename columns as needed.
     colnames(data)[colnames(data) == input$id_variable]    <- "subject"
