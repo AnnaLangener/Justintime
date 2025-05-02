@@ -1,7 +1,7 @@
-renv::load()
-if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+#renv::load()
+#if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 
-renv::restore()
+#renv::restore()
 
 library(shiny)
 library(bslib)
@@ -525,8 +525,10 @@ server <- function(input, output, session) {
   ### Descriptive
   model_data <- reactive({
     req(analyzed_data())
-    data <- na.omit(analyzed_data())
-    
+   
+    #data <- na.omit(analyzed_data())
+    data <- analyzed_data()
+  
     overall_prob_outcome <- mean(data[[input$outcome_variable]], na.rm = TRUE)
     
     grouped <- data %>% 
