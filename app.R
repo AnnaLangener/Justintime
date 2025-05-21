@@ -152,13 +152,13 @@ ui <- fluidPage(
                    accordion_panel(
                      title = "Preview Simulation Results",
                      h5("Info"),
-                     p("You can download this data and upload it under the 'Upload your own data' tab for further exploration, visualization, and analysis. For a quick preview of model performance, you can find the results below. We ran a simple Random Forest model using your selected parameters, executing it twice—once with non-centered predictors and once with centered predictors."),
+                     p("You can download this data and upload it under the 'Upload your own data' tab for further exploration, visualization, and analysis. For a quick preview of model performance, you can find the results below. We ran a simple Random Forest model using your selected parameters."),
                      
-                     h5("Simulation Results (Not Centered)"),
+                     h5("Simulation Results"),
                      withSpinner(tableOutput("simulation_results")),
                      
-                     h5("Simulation Results (Centered)"),
-                     withSpinner(tableOutput("simulation_results_centered"))
+                     # h5("Simulation Results (Centered)"),
+                     # withSpinner(tableOutput("simulation_results_centered"))
                 
                    )  
                  ),
@@ -239,20 +239,20 @@ ui <- fluidPage(
                     tableOutput("simulation_results_upload1_baseline"),
                   ),
                   accordion_panel( 
-                    title = "4. Include Within-Person Evaluation for Tracking and Consider Centering", 
+                    title = "4. Include Within-Person Evaluation for Tracking", 
                     h5("General Information"),
-                    "When tracking individuals over time and predicting within-person differences, model performance should be evaluated both across the full dataset and within each individual. In our paper we have shown that centering predictors can improve accuracy and reduce bias, so we present results for both centered and uncentered predictors. In both cases we ran a simple Random Forest model.",
+                    "When tracking individuals over time and predicting within-person differences, model performance should be evaluated both across the full dataset and within each individual. We ran a simple Random Forest model.",
                     tags$br(),
                     tags$br(),
-                    h5("Simulation Results (not centered)"),
+                    h5("Simulation Results"),
                     withSpinner(textOutput("model_results_text")),
                     tags$br(),
                     tableOutput("simulation_results_upload"),
                     tags$br(),
-                    h5("Simulation Results (centered)"),    
-                    withSpinner(textOutput("model_results_text_centered")),
-                    tags$br(),
-                    tableOutput("simulation_results_upload_centered"),
+                    # h5("Simulation Results (centered)"),    
+                    # withSpinner(textOutput("model_results_text_centered")),
+                    # tags$br(),
+                    # tableOutput("simulation_results_upload_centered"),
                   ),
                    ),  
           
@@ -1055,7 +1055,7 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
     
     # Define the base result text
     base_text <- paste0(
-      "The machine learning model that used non-centered predictors achieved an overall AUC of ", auc_value, 
+      "The machine learning model achieved an overall AUC of ", auc_value, 
       " and an accuracy of ", accuracy_value, ". "
     )
     
@@ -1101,7 +1101,7 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
     # Add cross-validation strategy-specific information
     if (input$split_method_own == "record-wise") {
       within_person_text <- paste0(
-        "The machine learning model that used centered predictors achieved an overall AUC of ", auc_value, 
+        "The machine learning model achieved an overall AUC of ", auc_value, 
         " and an accuracy of ", accuracy_value, ". Since you selected a 'record-wise' cross-validation strategy, within-person variability is an important aspect to consider. ",
         "For within-person performance, the model achieved a mean AUC of ", mean_auc_within, 
         " (SD: ", sd_auc_within, "), with ", perc_auc_above_05, "% of participants having an AUC above 0.5. ",
@@ -1113,7 +1113,7 @@ Given this strong baseline performance, it may be necessary to reconsider whethe
       )
     } else if (input$split_method_own == "moving-window") {
       within_person_text <- paste0(
-        "The machine learning model that used centered predictors achieved an overall AUC of ", auc_value, 
+        "The machine learning model achieved an overall AUC of ", auc_value, 
         " and an accuracy of ", accuracy_value, ". For within-person performance, the model achieved a mean AUC of ", mean_auc_within, 
         " (SD: ", sd_auc_within, "), with ", perc_auc_above_05, "% of participants having an AUC above 0.5. ",
         "A total of ", n_included_within, " participants were included in the within-person performance analysis (the other participants did not experience any variability in the test split)."
