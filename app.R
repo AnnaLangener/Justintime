@@ -3,6 +3,7 @@
 
 #renv::restore()
 
+
 library(shiny)
 library(bslib)
 library(randomForest)
@@ -19,7 +20,7 @@ library(shinyjs)
 
 source("Simulation_Functions.R")
 source("Simulation_UploadData.R")
-
+options(shiny.maxRequestSize=30*1024^2)
 ui <- fluidPage(
   useShinyjs(), 
   theme = bs_theme(version = 5, bootswatch = "journal"),
@@ -528,8 +529,8 @@ server <- function(input, output, session) {
    
     #data <- na.omit(analyzed_data())
     data <- analyzed_data()
-    print(unique(data[[input$id_variable]]))
-  
+
+      
     overall_prob_outcome <- mean(data[[input$outcome_variable]], na.rm = TRUE)
     
     grouped <- data %>% 

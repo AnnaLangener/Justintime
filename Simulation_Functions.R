@@ -148,11 +148,13 @@ run_simulation <- function(features_sample,cv,n_bootstrap,testsize, seed = "1236
       
       RF <- randomForest(train_X,train_Y,na.action=na.omit)
       class_pred <- predict(RF, test_X)
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       true_list[[i]]<- test_Y
-      pred_list[[i]] <- as.numeric(as.character(class_pred))
-      roc_curve <- roc(test_Y,  as.numeric(as.character(class_pred)),quiet = TRUE)
+      pred_list[[i]] <- class_pred_auc
+      roc_curve <- roc(test_Y,  class_pred_auc,quiet = TRUE)
       auc_value[i] <- auc(roc_curve)
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
@@ -292,11 +294,13 @@ run_simulation_centering <- function(features_sample,cv,n_bootstrap,testsize, se
     if(cv == "record-wise"){
       RF <- randomForest(train_X,train_Y)
       class_pred <- predict(RF, test_X)
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       true_list[[i]]<- test_Y
-      pred_list[[i]] <- as.numeric(as.character(class_pred))
-      roc_curve <- roc(test_Y,  as.numeric(as.character(class_pred)),quiet = TRUE)
+      pred_list[[i]] <- class_pred_auc
+      roc_curve <- roc(test_Y, class_pred_auc,quiet = TRUE)
       auc_value[i] <- auc(roc_curve)
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
@@ -444,10 +448,12 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
       
       RF <- randomForest(train_X,train_Y)
       class_pred <- predict(RF, test_X)
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc_sw[k] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       if (length(unique(test_Y)) == 2) {
-        roc_curve <- roc(test_Y, as.numeric(as.character(class_pred)), quiet = TRUE)
+        roc_curve <- roc(test_Y, class_pred_auc, quiet = TRUE)
         auc_value_sw[k] <- auc(roc_curve)
       } else {
         auc_value_sw[k] <- NA
@@ -458,7 +464,7 @@ run_simulation_slidingwindow <- function(features_sample,n_bootstrap,windowsize,
         data.frame(
           subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
           true = test_Y,                                   
-          pred = class_pred
+          pred = class_pred_auc
         )
       )
       
@@ -623,10 +629,12 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
       
       RF <- randomForest(train_X,train_Y)
       class_pred <- predict(RF, test_X)
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc_sw[k] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       if (length(unique(test_Y)) == 2) {
-        roc_curve <- roc(test_Y, as.numeric(as.character(class_pred)), quiet = TRUE)
+        roc_curve <- roc(test_Y, class_pred_auc, quiet = TRUE)
         auc_value_sw[k] <- auc(roc_curve)
       } else {
         auc_value_sw[k] <- NA
@@ -637,7 +645,7 @@ run_simulation_slidingwindow_centering <- function(features_sample,n_bootstrap,w
         data.frame(
           subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
           true = test_Y,                                   
-          pred = class_pred
+          pred = class_pred_auc
         )
       )
       

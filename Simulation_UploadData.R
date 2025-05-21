@@ -8,7 +8,7 @@ shuffle_data <- function(data, subject_var, outcome_var) {
   shuffled_subjects <- sample(unique_subjects)
   mapping <- data.frame(old_subject = unique_subjects, new_subject = shuffled_subjects,
                         stringsAsFactors = FALSE)
-  
+
   # Merge mapping with data and update the subject column:
   data <- data %>%
     left_join(mapping, by = setNames("old_subject", subject_var)) %>%
@@ -47,8 +47,6 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
   true_list_base <- list()  # To store true_sw for each iteration
   pred_list_base <- list() 
   ind_base <- list()
-  
-  features_sample <- na.omit(features_sample)
   
   for (i in 1:n_bootstrap) {
     n_subjects  = length(unique(features_sample$subject))
@@ -90,13 +88,15 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
     if(cv == "subject-wise" | cv == "record-wise"){
       
       
-      RF <- randomForest(train_X,train_Y,na.action=na.omit)
-      class_pred <- predict(RF, test_X)
+      RF <- randomForest(na.roughfix(train_X),train_Y)
+      class_pred <- predict(RF, na.roughfix(test_X))
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       true_list[[i]]<- test_Y
-      pred_list[[i]] <- as.numeric(as.character(class_pred))
-      roc_curve <- roc(test_Y,  as.numeric(as.character(class_pred)),quiet = TRUE)
+      pred_list[[i]] <- class_pred_auc
+      roc_curve <- roc(test_Y,  class_pred_auc,quiet = TRUE)
       auc_value[i] <- auc(roc_curve)
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
@@ -180,6 +180,9 @@ run_simulation_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "
   
   return(results_shiny)
 } 
+
+
+#features_sample <- read.csv("/Users/f007qrc/projects/Justintime_Paper/all_studentlife.csv")
 ############################################
 run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize, seed = "12361488",n_features){
   set.seed(seed)
@@ -204,7 +207,7 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
     #### Row wise and subject wise ####
     #  Prepare training and testing sets
     
-    samples_test <- sample(x =nrow(features_sample), size = floor(testsize * nrow(features_sample))) 
+    samples_test <- sample(x = nrow(features_sample), size = floor(testsize * nrow(features_sample))) 
     samples_train <- setdiff(1:(nrow(features_sample)), samples_test) 
     
     train_X = features_sample[samples_train, which(colnames(features_sample) %in% n_features)]
@@ -213,12 +216,17 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
     train_Y =  as.factor(features_sample$y[samples_train])
     test_Y = as.factor(features_sample$y[samples_test])
     
+    # train_Y =  as.factor(features_sample$stress[samples_train])
+    # test_Y = as.factor(features_sample$stress[samples_test])
+    
     subject[[i]] = features_sample$subject[samples_test]
+    
+    #subject[[i]] = features_sample$uid[samples_test]
     
     # Center the training set
     subject_means <- features_sample[samples_train, ] %>%
       group_by(subject) %>%
-      summarise(across(all_of(names(train_X)), mean), .groups = "drop")
+      summarise(across(all_of(names(train_X)), ~mean(.x, na.rm = TRUE)), .groups = "drop")
     
     # Center the training set
     train_X <- features_sample[samples_train, ] %>%
@@ -234,13 +242,15 @@ run_simulation_centering_own <- function(features_sample,cv,n_bootstrap,testsize
     
     # Train and evaluate the Random Forest model  
     if(cv == "record-wise"){
-      RF <- randomForest(train_X,train_Y)
-      class_pred <- predict(RF, test_X)
+      RF <- randomForest(na.roughfix(train_X),train_Y)
+      class_pred <- predict(RF, na.roughfix(test_X))
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc[i] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       true_list[[i]]<- test_Y
-      pred_list[[i]] <- as.numeric(as.character(class_pred))
-      roc_curve <- roc(test_Y,  as.numeric(as.character(class_pred)),quiet = TRUE)
+      pred_list[[i]] <- class_pred_auc
+      roc_curve <- roc(test_Y,  class_pred_auc,quiet = TRUE)
       auc_value[i] <- auc(roc_curve)
       
       ind[[i]] = data.frame(subject = subject[[i]], true = true_list[[i]], pred = pred_list[[i]])
@@ -389,12 +399,14 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
       
       # Train and evaluate the Random Forest model 
       
-      RF <- randomForest(train_X,train_Y)
-      class_pred <- predict(RF, test_X)
+      RF <- randomForest(na.roughfix(train_X),train_Y)
+      class_pred <- predict(RF, na.roughfix(test_X))
+      class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+      
       acc_sw[k] <- mean(as.numeric(as.character(class_pred)) == test_Y)
       
       if (length(unique(test_Y)) == 2) {
-        roc_curve <- roc(test_Y, as.numeric(as.character(class_pred)), quiet = TRUE)
+        roc_curve <- roc(test_Y, as.numeric(as.character(class_pred_auc)), quiet = TRUE)
         auc_value_sw[k] <- auc(roc_curve)
       } else {
         auc_value_sw[k] <- NA
@@ -405,7 +417,7 @@ run_simulation_slidingwindow_own <- function(features_sample,n_bootstrap,windows
         data.frame(
           subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
           true = test_Y,                                   
-          pred = class_pred
+          pred = class_pred_auc
         )
       )
       
@@ -564,12 +576,14 @@ run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstr
           mutate(across(all_of(names(train_X)), ~ . - get(paste0(cur_column(), "_mean")))) %>%
           select(all_of(names(train_X)))
         
-        RF <- randomForest(train_X, train_Y)
-        class_pred <- predict(RF, test_X)
+        RF <- randomForest(na.roughfix(train_X), train_Y)
+        class_pred <- predict(RF, na.roughfix(test_X))
+        class_pred_auc <- predict(RF, na.roughfix(test_X),type="prob")[, 2]
+        
         acc_sw[k] <- mean(as.numeric(as.character(class_pred)) == test_Y)
         
         if (length(unique(test_Y)) == 2) {
-          roc_curve <- roc(test_Y, as.numeric(as.character(class_pred)), quiet = TRUE)
+          roc_curve <- roc(test_Y, class_pred_auc, quiet = TRUE)
           auc_value_sw[k] <- auc(roc_curve)
         } else {
           auc_value_sw[k] <- NA
@@ -580,7 +594,7 @@ run_simulation_slidingwindow_own_centering <- function(features_sample,n_bootstr
           data.frame(
             subject = as.character(features_sample$subject[features_sample$time %in% testSlices[[k]]]),
             true = test_Y,
-            pred = class_pred
+            pred = class_pred_auc
           )
         )
         
